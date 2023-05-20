@@ -1,0 +1,16 @@
+{
+    "Lua.diagnostics.globals": [
+        "SlashCmdList",
+        "StaticPopup_Show",
+        "DEFAULT_CHAT_FRAME",
+        "ReloadUI",
+        "StaticPopupDialogs",
+        "UIErrorsFrame",
+        "READY_CHECK_READY_TEXTURE",
+        "READY_CHECK_NOT_READY_TEXTURE",
+        "READY_CHECK_WAITING_TEXTURE",
+        "LE_PARTY_CATEGORY_INSTANCE",
+        "InterfaceOptions_AddCategory",
+        "InterfaceOptionsFrame_OpenToCategory"
+    ]
+}

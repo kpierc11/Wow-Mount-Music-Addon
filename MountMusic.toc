@@ -1,0 +1,8 @@
+## Interface: 30401
+## Title: Mount Music
+## Notes: Mount Music addon
+## Author: Kaleb Pierce
+## Version: 1.0.0
+
+MountMusicUI.xml
+MountMusic.lua

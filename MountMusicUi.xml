@@ -1,0 +1,5 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+  <Frame name="MountMusicOptionsPanel" parent="InterfaceOptionsFramePanelContainer">
+   <button name="MountMusicOptionsPanel"></button>
+  </Frame>
+</Ui>
