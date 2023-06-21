@@ -4,5 +4,5 @@
 ## Author: Kaleb Pierce
 ## Version: 1.0.0
 
-MountMusicUI.xml
+MountMusicUi.xml
 MountMusic.lua
