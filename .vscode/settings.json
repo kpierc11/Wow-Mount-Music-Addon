@@ -58,6 +58,16 @@
         "PanelTemplates_TabResize",
         "CharacterFrameCloseButton",
         "CharacterFrame",
-        "CharacterFrameTab3"
+        "CharacterFrameTab3",
+        "BACKDROP_TUTORIAL_16_16",
+        "GetLFGMode",
+        "LE_LFG_CATEGORY_LFR",
+        "InspectFrame",
+        "UIDropDownMenu_SetSelectedValue",
+        "NORMAL_FONT_COLOR",
+        "GRAY_FONT_COLOR",
+        "UISpecialFrames",
+        "ACCEPT",
+        "CANCEL"
     ]
 }

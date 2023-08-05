@@ -3,6 +3,6 @@
 ## Notes: Mount Music addon
 ## Author: Kaleb Pierce
 ## Version: 1.0.0
+## SavedVariables: selectedMountMusicValues
 
-MountMusicUi.xml
 MountMusic.lua
