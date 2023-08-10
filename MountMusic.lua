@@ -2,7 +2,7 @@
 local mountMusicSettingsFrame = CreateFrame("Frame", nil, UIParent)
 
 --Check for first time mounting up--
-local firstTimeMountingUp = true
+local alreadyMounted = false
 
 --Initial position of mount ui element in the options panel --
 local mountUiYPos = 230;
@@ -10,9 +10,20 @@ local mountUiYPos = 230;
 --Number of mounts --
 local numMounts = GetNumCompanions("MOUNT")
 
+--Expansion table
+local mountMusicDropdownValues = {
+    "no music", "chrono-trigger-main-theme.mp3",
+    "Duel-of-the-Fates.ogg",
+    "ff10-battle-theme.mp3", "Final-Fantasy-Battle.ogg", "kharazan-theme.mp3", "rag-boss-fight.mp3",
+    "take-me-home.ogg",
+    "cyberpunk.mp3"
+}
+
 --Music files for dropDown selection
-local mountMusicDropdownValues = { "chrono-battle-theme.ogg", "chrono-trigger-main-theme.mp3", "Duel-of-the-Fates.ogg",
-    "ff10-battle-theme.mp3", "Final-Fantasy-Battle.ogg", "kharazan-theme.mp3", "rag-boss-fight.mp3", "take-me-home.ogg" }
+-- local mountMusicDropdownValues = { "no music", "chrono-trigger-main-theme.mp3",
+--     "Duel-of-the-Fates.ogg",
+--     "ff10-battle-theme.mp3", "Final-Fantasy-Battle.ogg", "kharazan-theme.mp3", "rag-boss-fight.mp3", "take-me-home.ogg",
+--     "cyberpunk.mp3" }
 
 --Create options panel  --
 mountMusicSettingsFrame.panel = CreateFrame("Frame")
@@ -44,7 +55,7 @@ local function createMountUiElements(id, yPos)
     local frame = CreateFrame("Frame", "mountMusicUiElement" .. id, scrollChild,
         "ToolTipBorderedFrameTemplate")
     frame:SetPoint("LEFT", x, yPos)
-    frame:SetWidth(550)
+    frame:SetWidth(InterfaceOptionsFramePanelContainer:GetWidth() - 80)
     frame:SetHeight(70)
 
 
@@ -62,8 +73,9 @@ local function createMountUiElements(id, yPos)
 
     local dropDown = CreateFrame("Frame", "mountMusicUiDropdown" .. id, frame,
         "UIDropDownMenuTemplate")
-    dropDown:SetPoint("RIGHT", 200, 0)
-    dropDown:SetWidth(400)
+    dropDown:SetPoint("RIGHT", 0, 0)
+    dropDown:SetWidth(200)
+    UIDropDownMenu_SetWidth(dropDown, 200)
 
     if selectedMountMusicValues ~= nil and selectedMountMusicValues[creatureID] ~= nil then
         UIDropDownMenu_SetText(dropDown, selectedMountMusicValues[creatureID])
@@ -79,9 +91,7 @@ local function createMountUiElements(id, yPos)
             info.func = function(self)
                 UIDropDownMenu_SetSelectedValue(dropDown, self.value)
                 UIDropDownMenu_SetText(dropDown, self.value)
-                print("You selected Option " .. self.value)
                 selectedMountMusicValues[creatureID] = self.value
-                print(selectedMountMusicValues[creatureID])
             end
             UIDropDownMenu_AddButton(info)
         end
@@ -92,36 +102,27 @@ end
 
 -- Play music when mounted --
 local function playMountMusic()
-    if numMounts > 0 then
-        if IsMounted() and firstTimeMountingUp then
-            for i = 1, numMounts do
-                local creatureID, creatureName, creatureSpellID, icon, isSummoned, mountType = GetCompanionInfo("MOUNT",
-                    i)
+    if IsMounted() and alreadyMounted == false then
+        for i = 1, numMounts do
+            local creatureID, creatureName, creatureSpellID, icon, isSummoned, mountType = GetCompanionInfo("MOUNT",
+                i)
 
-                if isSummoned then
-                    print(selectedMountMusicValues[creatureID])
-                    print(creatureName, icon)
-                    SetCVar("Sound_MusicVolume", 0.4)
-                    if selectedMountMusicValues[creatureID] ~= nil then
-                        PlayMusic("Interface/AddOns/MountMusic/audio-files/" .. selectedMountMusicValues[creatureID])
-                    end
+            if isSummoned then
+                SetCVar("Sound_MusicVolume", 0.5)
+                SetCVar("Sound_AmbienceVolume", 0.1)
+                SetCVar("Sound_SFXVolume", 0.3)
+                if selectedMountMusicValues[creatureID] ~= nil then
+                    PlayMusic("Interface/AddOns/MountMusic/audio-files/" .. selectedMountMusicValues[creatureID])
+                    alreadyMounted = true
                 end
             end
-        elseif IsMounted() == false then
-            print("Music stopped")
-            StopMusic()
         end
-    else
-        print("\124cff00ccffPlease go into the mount music options settings and generate mount data.\124r")
-        print("\124cff00ccffIf you don't have any mounts this addon will not work.\124r")
-    end
-
-    if IsMounted() then
-        firstTimeMountingUp = false
-    else
-        firstTimeMountingUp = true
+    elseif IsMounted() == false then
+        StopMusic()
+        alreadyMounted = false
     end
 end
+
 
 --NumMounts always seems to be zero on player login.
 --If it is not zero create the mount ui elements else create a button that will generate the mount music ui.
@@ -131,16 +132,28 @@ if (numMounts ~= 0 and selectedMountMusicValues ~= nil) then
         mountUiYPos = mountUiYPos - 90
     end
 else
-    local text = CreateFrame("Frame", nil, mountMusicSettingsFrame.panel)
-    text:SetWidth(1)
-    text:SetHeight(1)
-    text:SetPoint("CENTER", 650, -100)
-    text.text = text:CreateFontString(nil, "ARTWORK")
-    text.text:SetFont("Fonts\\ARIALN.ttf", 13, "OUTLINE")
-    text.text:SetPoint("CENTER", 0, 0)
+    local heading = CreateFrame("Frame", nil, mountMusicSettingsFrame.panel)
+    heading:SetWidth(50)
+    heading:SetHeight(50)
+    heading:SetPoint("TOPLEFT")
+    heading.text = heading:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+    heading.text:SetPoint("TOPLEFT", 0, 0)
+    heading.text:SetText("Mount Music")
+
+
+    local bodyText = CreateFrame("Frame", nil, mountMusicSettingsFrame.panel)
+    bodyText:SetWidth(50)
+    bodyText:SetHeight(50)
+    bodyText:SetPoint("TOPLEFT", 0, 0)
+    bodyText.text = bodyText:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    bodyText.text:SetPoint("TOPLEFT", 0, -30)
+    bodyText.text:SetText("Select songs you want played when riding specific mounts.")
+
+
+
     local f = CreateFrame("Button", nil, mountMusicSettingsFrame.panel, "UIPanelButtonTemplate")
-    f:SetSize(200, 30)
-    f:SetPoint("CENTER")
+    f:SetSize(180, 30)
+    f:SetPoint("TOPLEFT", 0, -50)
     f:SetText("Generate Mount Data")
     f:SetScript("OnClick", function()
         local firstLoadNumMounts = GetNumCompanions("Mount")
@@ -149,6 +162,8 @@ else
             createMountUiElements(i, mountUiYPos)
             mountUiYPos = mountUiYPos - 90
         end
+        heading:Hide()
+        bodyText:Hide()
         f:Hide()
     end)
 end
@@ -161,8 +176,8 @@ local function onEvent(self, event, ...)
         local addonName = ...
         if addonName == "MountMusic" then
             print("\124cff00ccffMountMusic version 1.0.0 loaded. Enjoy!\124r")
-            numMounts = GetNumCompanions("MOUNT")
-
+            print("\124cff00ccffPlease go into the mount music options settings and generate mount data.\124r")
+            print("\124cff00ccffIf you don't have any mounts this addon will not work.\124r")
             if selectedMountMusicValues == nil then
                 _G.selectedMountMusicValues = {}
             end

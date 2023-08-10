@@ -68,6 +68,8 @@
         "GRAY_FONT_COLOR",
         "UISpecialFrames",
         "ACCEPT",
-        "CANCEL"
+        "CANCEL",
+        "GameFontNormalLarge",
+        "Professions"
     ]
 }
