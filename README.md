@@ -14,5 +14,7 @@ Add your audio files here. (MP3 or OGG files only)
  
 ![image](https://github.com/kpierc11/Wow-Mount-Music-Addon/assets/35708070/32173565-a0a6-4f28-b617-819513a893a8)
 
+3. Please reload the ui or restart the game. 
+
 
 
