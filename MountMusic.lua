@@ -11,19 +11,154 @@ local mountUiYPos = 230;
 local numMounts = GetNumCompanions("MOUNT")
 
 --Expansion table
-local mountMusicDropdownValues = {
-    "no music", "chrono-trigger-main-theme.mp3",
-    "Duel-of-the-Fates.ogg",
-    "ff10-battle-theme.mp3", "Final-Fantasy-Battle.ogg", "kharazan-theme.mp3", "rag-boss-fight.mp3",
-    "take-me-home.ogg",
-    "cyberpunk.mp3"
+local vanillaDropdownValues = {
+    ["Darnassus Intro"] = 53183,
+    ["Darnassus Walking 1"] = 53184,
+    ["Darnassus Walking 2"] = 53185,
+    ["Darnassus Walking 3"] = 53186,
+    ["Druid Grove"] = 53187,
+    ["Warrior Terrace"] = 53188,
+    ["Gnomeregan 01"] = 53189,
+    ["Gnomeregan 02"] = 53190,
+    ["Ironforge Intro"] = 53191,
+    ["Ironforge Walking 01"] = 53192,
+    ["Ironforge Walking 02"] = 53193,
+    ["Ironforge Walking 03 (Glenn)"] = 53194,
+    ["Ironforge Walking 04"] = 53195,
+    ["Tinkertown Intro Moment"] = 53196,
+    ["Orgrimmar 01 Moment"] = 53197,
+    ["Orgrimmar 01 Zone"] = 53198,
+    ["Orgrimmar 02 Moment"] = 53199,
+    ["Orgrimmar 02 Zone"] = 53200,
+    ["Orgrimmar Intro Moment"] = 53201,
+    ["Stormwind 01 Moment"] = 53202,
+    ["Stormwind 02 Moment"] = 53203,
+    ["Stormwind 03 Moment"] = 53204,
+    ["Stormwind High Seas Moment"] = 53210,
+    ["Stormwind Intro Moment"] = 53211,
+    ["Thunder Bluff Intro"] = 53212,
+    ["Thunder Bluff Walking 01"] = 53213,
+    ["Thunder Bluff Walking 02"] = 53214,
+    ["Thunder Bluff Walking 03"] = 53215,
+    ["Undercity 01 Zone"] = 53216,
+    ["Undercity 02 Zone"] = 53217,
+    ["Undercity 03 Zone"] = 53218,
+    ["Undercity Intro Moment"] = 53219,
+    ["BC Main Theme"] = 53220,
+    ["BCCredits Lament of the Highborne"] = 53221,
+    ["WotLK Main Title"] = 53222,
+    ["WoW Main Theme"] = 53223,
+    ["Angelic 01"] = 53224,
+    ["Battle 01"] = 53225,
+    ["Battle 02"] = 53226,
+    ["Battle 03"] = 53227,
+    ["Battle 04"] = 53228,
+    ["Battle 05"] = 53229,
+    ["Battle 06"] = 53230,
+    ["Gloomy 01"] = 53231,
+    ["Gloomy 02"] = 53232,
+    ["Gul'dan's Entrance Theme"] = 53233,
+    ["Haunted 01"] = 53234,
+    ["Haunted 02"] = 53235,
+    ["Magic 01 Moment"] = 53236,
+    ["Magic 01 Zone 1"] = 53237,
+    ["Magic 01 Zone 2"] = 53238,
+    ["Mystery Ahn'Qiraj Intro 1"] = 53239,
+    ["Mystery 01 Zone"] = 53240,
+    ["Sacred 01"] = 53250,
+    ["Sacred 02"] = 53251,
+    ["Spooky 01 Moment"] = 53252,
+    ["Swamp 01"] = 53253,
+    ["Zul'Gurub Voodoo"] = 53254,
+    ["Alliance Fire Pole"] = 53255,
+    ["Darkmoon Faire 1"] = 53256,
+    ["Darkmoon Faire 2"] = 53257,
+    ["Darkmoon Faire 3"] = 53258,
+    ["Darkmoon Faire 4"] = 53259,
+    ["Horde Fire Pole"] = 53260,
+    ["Ahn'Qiraj Exterior Walking 1"] = 53261,
+    ["Ahn'Qiraj Exterior Walking 2"] = 53262,
+    ["Ahn'Qiraj Exterior Walking 3"] = 53263,
+    ["Ahn'Qiraj Exterior Walking 4"] = 53264,
+    ["Ahn'Qiraj Interior 1"] = 53265,
+    ["Ahn'Qiraj Interior 2"] = 53266,
+    ["Ahn'Qiraj Interior 3"] = 53267,
+    ["Ahn'Qiraj Interior Center Room 1"] = 53268,
+    ["Ahn'Qiraj Interior Intro Main"] = 53269,
+    ["Ahn'Qiraj King Room"] = 53270,
+    ["Ahn'Qiraj Triangle Room 1"] = 53271,
+    ["Ahn'Qiraj Triangle Room 2"] = 53272,
+    ["Azuremyst Draenei Walk Uni 08r"] = 53281,
+    ["Azuremyst Exodar Intro 01"] = 53282,
 }
 
---Music files for dropDown selection
--- local mountMusicDropdownValues = { "no music", "chrono-trigger-main-theme.mp3",
---     "Duel-of-the-Fates.ogg",
---     "ff10-battle-theme.mp3", "Final-Fantasy-Battle.ogg", "kharazan-theme.mp3", "rag-boss-fight.mp3", "take-me-home.ogg",
---     "cyberpunk.mp3" }
+--Expansion table
+local tbcDropdownValues = {
+    ["Assembly Chamber Walk 1"] = 53700,
+    ["Assembly Chamber Walk 2"] = 53701,
+    ["Fel Energy Walk"] = 53702,
+    ["Isle of Dark Walk 1"] = 53703,
+    ["Isle of Dark Walk 2"] = 53704,
+    ["Isle of Dark Walk 3"] = 53705,
+    ["Isle of Light Walk 1"] = 53706,
+    ["Isle of Light Walk 2"] = 53707,
+    ["Isle of Light Walk 3"] = 53708,
+    ["Isle of Meditation Walk 1"] = 53709,
+    ["Isle of Meditation Walk 2"] = 53710,
+    ["Magister's Terrace Walk 3"] = 53718,
+    ["Magister's Terrace Walk 4"] = 53719,
+    ["Magister's Terrace Walk 5"] = 53720,
+    ["Plateau Arrival Walk"] = 53721,
+    ["Plateau Sunwell Walk 1"] = 53722,
+    ["Plateau Sunwell Walk 2"] = 53723,
+    ["Plateau Sunwell Walk 3"] = 53724,
+    ["Plateau Sunwell Walk 4"] = 53725,
+    ["Plateau Sunwell Walk 5"] = 53726,
+    ["Plateau Sunwell Walk 6"] = 53727,
+    ["Quel'Danas Walk 1"] = 53728,
+    ["Quel'Danas Walk 2"] = 53729,
+    ["Sanctum Walk"] = 53730,
+    ["Shorel'aran Walk"] = 53731,
+    ["Sunwell Bombing Run"] = 53732,
+    ["Sunwell Flyby"] = 53733,
+    ["The Sunwell's Well Walk 1"] = 53734,
+    ["The Sunwell's Well Walk 2"] = 53735,
+    ["The Sunwell's Well Walk 3"] = 53736,
+}
+
+--Expansion table
+local wotlkDropdownValues = {
+    ["Abomination Boss 1"] = 53591,
+    ["Abomination Boss 2"] = 53592,
+    ["Abomination Wing 1"] = 53593,
+    ["Abomination Wing 2"] = 53594,
+    ["Abomination Wing 3"] = 53595,
+    ["Frost Wyrm 1"] = 53596,
+    ["Frost Wyrm 2"] = 53597,
+    ["Frost Wyrm 3"] = 53598,
+    ["Frost Wyrm 4"] = 53599,
+    ["Hub Base 1"] = 53600,
+    ["Hub Base 2"] = 53601,
+    ["Kel'Thuzad 1"] = 53602,
+    ["Kel'Thuzad 2"] = 53603,
+    ["Kel'Thuzad 3"] = 53604,
+    ["Plague Boss 1"] = 53605,
+    ["Plague Wing 1"] = 53606,
+    ["Plague Wing 2"] = 53607,
+    ["Plague Wing 3"] = 53608,
+    ["Spider Boss 1"] = 53609,
+    ["Spider Boss 2"] = 53610,
+    ["Spider Wing 1"] = 53611,
+    ["Spider Wing 2"] = 53612,
+    ["Spider Wing 3"] = 53613,
+    ["Walking 1"] = 53614,
+    ["Walking 2"] = 53615,
+    ["Walking 3"] = 53616,
+    ["Walking 4"] = 53617,
+    ["Walking 5"] = 53618,
+    ["Walking 6"] = 53619,
+}
+
 
 --Create options panel  --
 mountMusicSettingsFrame.panel = CreateFrame("Frame")
@@ -77,23 +212,68 @@ local function createMountUiElements(id, yPos)
     dropDown:SetWidth(200)
     UIDropDownMenu_SetWidth(dropDown, 200)
 
-    if selectedMountMusicValues ~= nil and selectedMountMusicValues[creatureID] ~= nil then
-        UIDropDownMenu_SetText(dropDown, selectedMountMusicValues[creatureID])
+    if selectedMountMusicValues and selectedMountMusicValues[creatureID] then
+        local selectedSongName, selectedSongFileId = next(selectedMountMusicValues[creatureID])
+        print(selectedSongName)
+        UIDropDownMenu_SetText(dropDown, selectedSongName)
     else
         UIDropDownMenu_SetText(dropDown, "Select a song")
     end
 
+
+    local function handleDropdownSelect(self)
+        local selectedText = self:GetText() -- Get the selected text from the button
+        local selectedValue = self.value
+        UIDropDownMenu_SetSelectedValue(dropDown, selectedValue)
+        UIDropDownMenu_SetText(dropDown, selectedText)
+        selectedMountMusicValues[creatureID] = { [selectedText] = selectedValue }
+    end
+
+
     UIDropDownMenu_Initialize(dropDown, function(self, level, menuList)
         local info = UIDropDownMenu_CreateInfo()
-        for key, value in pairs(mountMusicDropdownValues) do
-            info.text = value
-            info.value = value
-            info.func = function(self)
-                UIDropDownMenu_SetSelectedValue(dropDown, self.value)
-                UIDropDownMenu_SetText(dropDown, self.value)
-                selectedMountMusicValues[creatureID] = self.value
-            end
+
+        if level == 1 then
+            info.text, info.hasArrow, info.menuList = "Vanilla", true, "vanilla"
             UIDropDownMenu_AddButton(info)
+            info.text, info.hasArrow, info.menuList = "Tbc", true, "burningCrusade"
+            UIDropDownMenu_AddButton(info)
+            info.text, info.hasArrow, info.menuList = "Wotlk", true, "wrath"
+            UIDropDownMenu_AddButton(info)
+        elseif menuList == "vanilla" then
+            local selectedSongName, selectedSongFileId = next(selectedMountMusicValues[creatureID])
+            for key, value in pairs(vanillaDropdownValues) do
+                info.text = tostring(key)
+                info.value = value
+                info.checked = selectedSongName == key
+                info.func = handleDropdownSelect
+                UIDropDownMenu_AddButton(info, level)
+            end
+        elseif menuList == "burningCrusade" then
+            local selectedSongName, selectedSongFileId = next(selectedMountMusicValues[creatureID])
+            for key, value in pairs(tbcDropdownValues) do
+                info.text = tostring(key)
+                info.value = value
+                info.checked = selectedSongName == key
+                info.func = handleDropdownSelect
+                UIDropDownMenu_AddButton(info, level)
+            end
+        elseif menuList == "wrath" then
+            local selectedSongName, selectedSongFileId = next(selectedMountMusicValues[creatureID])
+            for key, value in pairs(wotlkDropdownValues) do
+                info.text = tostring(key)
+                info.value = value
+                info.checked = selectedSongName == key
+                info.func = function(self)
+                    local selectedText = self:GetText() -- Get the selected text from the button
+                    local selectedValue = self.value
+
+                    UIDropDownMenu_SetSelectedValue(dropDown, selectedValue)
+                    UIDropDownMenu_SetText(dropDown, selectedText)
+                    selectedMountMusicValues[creatureID] = { [selectedText] = selectedValue }
+                end
+                UIDropDownMenu_AddButton(info, level)
+            end
         end
     end)
 end
@@ -112,8 +292,11 @@ local function playMountMusic()
                 SetCVar("Sound_AmbienceVolume", 0.1)
                 SetCVar("Sound_SFXVolume", 0.3)
                 if selectedMountMusicValues[creatureID] ~= nil then
-                    PlayMusic("Interface/AddOns/MountMusic/audio-files/" .. selectedMountMusicValues[creatureID])
-                    alreadyMounted = true
+                    local _, selectedSongFileId = next(selectedMountMusicValues[creatureID])
+                    if selectedSongFileId then
+                        PlayMusic(selectedSongFileId)
+                        alreadyMounted = true
+                    end
                 end
             end
         end
