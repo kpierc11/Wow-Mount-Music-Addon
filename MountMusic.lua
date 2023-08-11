@@ -214,7 +214,6 @@ local function createMountUiElements(id, yPos)
 
     if selectedMountMusicValues and selectedMountMusicValues[creatureID] then
         local selectedSongName, selectedSongFileId = next(selectedMountMusicValues[creatureID])
-        print(selectedSongName)
         UIDropDownMenu_SetText(dropDown, selectedSongName)
     else
         UIDropDownMenu_SetText(dropDown, "Select a song")
@@ -232,6 +231,11 @@ local function createMountUiElements(id, yPos)
 
     UIDropDownMenu_Initialize(dropDown, function(self, level, menuList)
         local info = UIDropDownMenu_CreateInfo()
+        local selectedSongName, selectedSongFileId = {}
+
+        if selectedMountMusicValues[creatureID] then
+            selectedSongName, selectedSongFileId = next(selectedMountMusicValues[creatureID])
+        end
 
         if level == 1 then
             info.text, info.hasArrow, info.menuList = "Vanilla", true, "vanilla"
@@ -241,7 +245,6 @@ local function createMountUiElements(id, yPos)
             info.text, info.hasArrow, info.menuList = "Wotlk", true, "wrath"
             UIDropDownMenu_AddButton(info)
         elseif menuList == "vanilla" then
-            local selectedSongName, selectedSongFileId = next(selectedMountMusicValues[creatureID])
             for key, value in pairs(vanillaDropdownValues) do
                 info.text = tostring(key)
                 info.value = value
@@ -250,7 +253,6 @@ local function createMountUiElements(id, yPos)
                 UIDropDownMenu_AddButton(info, level)
             end
         elseif menuList == "burningCrusade" then
-            local selectedSongName, selectedSongFileId = next(selectedMountMusicValues[creatureID])
             for key, value in pairs(tbcDropdownValues) do
                 info.text = tostring(key)
                 info.value = value
@@ -259,19 +261,11 @@ local function createMountUiElements(id, yPos)
                 UIDropDownMenu_AddButton(info, level)
             end
         elseif menuList == "wrath" then
-            local selectedSongName, selectedSongFileId = next(selectedMountMusicValues[creatureID])
             for key, value in pairs(wotlkDropdownValues) do
                 info.text = tostring(key)
                 info.value = value
                 info.checked = selectedSongName == key
-                info.func = function(self)
-                    local selectedText = self:GetText() -- Get the selected text from the button
-                    local selectedValue = self.value
-
-                    UIDropDownMenu_SetSelectedValue(dropDown, selectedValue)
-                    UIDropDownMenu_SetText(dropDown, selectedText)
-                    selectedMountMusicValues[creatureID] = { [selectedText] = selectedValue }
-                end
+                info.func = handleDropdownSelect
                 UIDropDownMenu_AddButton(info, level)
             end
         end
