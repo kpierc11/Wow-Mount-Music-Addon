@@ -381,8 +381,7 @@ local function createMountUiElements(id, yPos)
     local width = 45
     local height = 45
     local x = 10
-    local creatureID, creatureName, creatureSpellID, icon, isSummoned, mountType = GetCompanionInfo("MOUNT",
-        id)
+    local creatureName, creatureID, icon, active, isUsable, sourceType, isFavorite, isFactionSpecific, faction, hideOnChar, isCollected = C_MountJournal.GetDisplayedMountInfo(id)
 
     local frame = CreateFrame("Frame", "mountMusicUiElement" .. id, scrollChild,
         "ToolTipBorderedFrameTemplate")
@@ -701,10 +700,9 @@ end
 local function playMountMusic()
     if IsMounted() and alreadyMounted == false then
         for i = 1, numMounts do
-            local creatureID, creatureName, creatureSpellID, icon, isSummoned, mountType = GetCompanionInfo("MOUNT",
-                i)
+            local creatureName, creatureID, icon, active, isUsable, sourceType, isFavorite, isFactionSpecific, faction, hideOnChar, isCollected = C_MountJournal.GetDisplayedMountInfo(i)
 
-            if isSummoned then
+            if active then
                 SetCVar("Sound_MusicVolume", 0.5)
                 SetCVar("Sound_AmbienceVolume", 0.1)
                 SetCVar("Sound_SFXVolume", 0.3)
