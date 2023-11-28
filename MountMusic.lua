@@ -381,7 +381,8 @@ local function createMountUiElements(id, yPos)
     local width = 45
     local height = 45
     local x = 10
-    local creatureName, creatureID, icon, active, isUsable, sourceType, isFavorite, isFactionSpecific, faction, hideOnChar, isCollected = C_MountJournal.GetDisplayedMountInfo(id)
+    local creatureName, creatureID, icon, active, isUsable, sourceType, isFavorite, isFactionSpecific, faction, hideOnChar, isCollected =
+        C_MountJournal.GetDisplayedMountInfo(id)
 
     local frame = CreateFrame("Frame", "mountMusicUiElement" .. id, scrollChild,
         "ToolTipBorderedFrameTemplate")
@@ -443,15 +444,25 @@ local function createMountUiElements(id, yPos)
 
         -- Top Level --
         if level == 1 then
+            info.text = "No Music"
+            info.value = "noMusic"
+            info.checked = selectedSongName == "noMusic"
+            info.func = handleDropdownSelect
+            UIDropDownMenu_AddButton(info, level)
             info.text, info.hasArrow, info.menuList = "City Music", true, "cityMusic"
+            info.checked = false
             UIDropDownMenu_AddButton(info)
             info.text, info.hasArrow, info.menuList = "Expansion Themes", true, "expansionThemes"
+            info.checked = false
             UIDropDownMenu_AddButton(info)
             info.text, info.hasArrow, info.menuList = "Musical Moments", true, "musicMoments"
+            info.checked = false
             UIDropDownMenu_AddButton(info)
             info.text, info.hasArrow, info.menuList = "Zone Music", true, "zoneMusic"
+            info.checked = false
             UIDropDownMenu_AddButton(info)
             info.text, info.hasArrow, info.menuList = "Raids", true, "raids"
+            info.checked = false
             UIDropDownMenu_AddButton(info)
         end
 
@@ -700,7 +711,8 @@ end
 local function playMountMusic()
     if IsMounted() and alreadyMounted == false then
         for i = 1, numMounts do
-            local creatureName, creatureID, icon, active, isUsable, sourceType, isFavorite, isFactionSpecific, faction, hideOnChar, isCollected = C_MountJournal.GetDisplayedMountInfo(i)
+            local creatureName, creatureID, icon, active, isUsable, sourceType, isFavorite, isFactionSpecific, faction, hideOnChar, isCollected =
+                C_MountJournal.GetDisplayedMountInfo(i)
 
             if active then
                 SetCVar("Sound_MusicVolume", 0.5)
@@ -708,7 +720,7 @@ local function playMountMusic()
                 SetCVar("Sound_SFXVolume", 0.3)
                 if selectedMountMusicValues[creatureID] ~= nil then
                     local _, selectedSongFileId = next(selectedMountMusicValues[creatureID])
-                    if selectedSongFileId then
+                    if selectedSongFileId and selectedSongFileId ~= "noMusic" then
                         PlayMusic(selectedSongFileId)
                         alreadyMounted = true
                     end
