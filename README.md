@@ -1,5 +1,6 @@
 # MountMusic
 An addon to allow adding music to specific mounts in world of warcraft
+https://www.curseforge.com/wow/addons/wow-mount-music
 
 ![mount-music-settings-1](https://github.com/kpierc11/Wow-Mount-Music-Addon/assets/35708070/df0fb9c4-1f71-4999-9677-d21f12e8241d)
 
