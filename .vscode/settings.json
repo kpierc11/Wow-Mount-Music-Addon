@@ -71,7 +71,9 @@
         "CANCEL",
         "GameFontNormalLarge",
         "Professions",
-        "UIDropDownMenu_SetSelectedID"
+        "UIDropDownMenu_SetSelectedID",
+        "AddonCompartmentFrame",
+        "Settings"
     ],
     "Lua.runtime.version": "Lua 5.1",
     "Lua.runtime.builtin": {

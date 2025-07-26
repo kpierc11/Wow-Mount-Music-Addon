@@ -386,29 +386,26 @@ local function createMountUiElements(id, yPos)
 
     local frame = CreateFrame("Frame", "mountMusicUiElement" .. id, scrollChild,
         "ToolTipBorderedFrameTemplate")
-    frame:SetPoint("LEFT", x, yPos)
-    frame:SetWidth(InterfaceOptionsFramePanelContainer:GetWidth() - 80)
+    frame:SetPoint("CENTER", x, yPos)
+    frame:SetWidth(600 - 80)
     frame:SetHeight(70)
 
 
-    local mountIconButton = CreateFrame("Button", nil, frame)
-
-    mountIconButton:SetSize(width, height)
-    mountIconButton:SetPoint("LEFT", 20, 0)
-    mountIconButton:SetScript("OnClick", function()
-        CastSpellByName(creatureName)
-    end)
-
-    mountIconButton.Texture = frame:CreateTexture("mount music top icon",
-        "ARTWORK")
-    mountIconButton.Texture:SetWidth(width)
-    mountIconButton.Texture:SetHeight(height)
-    mountIconButton.Texture:SetPoint("LEFT", 20, 0)
-    mountIconButton.Texture:SetTexture(icon)
+    frame.Texture = frame:CreateTexture(nil, "ARTWORK")
+    frame.Texture:SetSize(width, height)
+    frame.Texture:SetPoint("LEFT", 20, 0)
+    frame.Texture:SetTexture(icon)
 
     frame.Text = frame:CreateFontString(nil, "OVERLAY", "GameTooltipText")
     frame.Text:SetPoint("LEFT", 75, 0)
+    frame.Text:SetWidth(200)
+    frame.Text:SetWordWrap(true)
+    frame.Text:SetJustifyH("LEFT")
     frame.Text:SetText(creatureName)
+
+    -- Optional: change font size
+    local fontFile, _, flags = frame.Text:GetFont()
+    frame.Text:SetFont(fontFile, 14, flags)
 
 
     local dropDown = CreateFrame("Frame", "mountMusicUiDropdown" .. id, frame,
@@ -424,6 +421,11 @@ local function createMountUiElements(id, yPos)
         UIDropDownMenu_SetText(dropDown, "Select a song")
     end
 
+    -- Set visible label font
+    local textRegion = _G["mountMusicUiDropdown" .. id .. "Text"]
+    if textRegion then
+        textRegion:SetFont("Fonts\\FRIZQT__.TTF", 14)
+    end
 
     local function handleDropdownSelect(self)
         local selectedText = self:GetText() -- Get the selected text from the button
