@@ -1,11 +1,20 @@
 # MountMusic
 An addon to allow adding music to specific mounts in world of warcraft
-https://www.curseforge.com/wow/addons/wow-mount-music
-CLASSIC VERSION
-![mount-music-settings-1](https://github.com/kpierc11/Wow-Mount-Music-Addon/assets/35708070/df0fb9c4-1f71-4999-9677-d21f12e8241d)
 
-![mount-music-addon-2](https://github.com/kpierc11/Wow-Mount-Music-Addon/assets/35708070/e2e91d44-3d92-4627-bed9-b068582b1b14)
+![image](https://github.com/kpierc11/Wow-Mount-Music-Addon/assets/35708070/5a5f1586-8317-4347-8f9c-a0c0b5d539ea)
 
-WOW LIVE VERSION
-<img width="1238" height="891" alt="image" src="https://github.com/user-attachments/assets/a06adc6f-87bb-442d-90df-787f08a8b5b3" />
+
+
+Instructions for adding your own music. 
+
+1. There is a folder called audio-files located in the interface/addons/mountmusic
+Add your audio files here. (MP3 or OGG files only)
+
+2. The exact audio file name needs to be added to this lua table in the MountMusic.lua file located in interface/addons/mountmusic
+ 
+![image](https://github.com/kpierc11/Wow-Mount-Music-Addon/assets/35708070/32173565-a0a6-4f28-b617-819513a893a8)
+
+3. Please reload the ui or restart the game. 
+
+
 
