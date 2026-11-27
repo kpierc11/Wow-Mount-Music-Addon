@@ -1,7 +1,8 @@
+
 -- Initial options frame
 local mountMusicSettingsFrame = CreateFrame("Frame", nil, UIParent, "SettingsFrameTemplate")
-local mmFrameWidth            = 600
-local mmFrameHeight           = 500
+local mmFrameWidth            = 800
+local mmFrameHeight           = 700
 
 --Set Title of the Mount Music setting frame
 local title                   = mountMusicSettingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
@@ -49,39 +50,47 @@ local function replaceMusicSelections(destination, source)
         end
     end
 end
+local savedMountMusicSelections = type(MountMusicDB.mountMusicSelections) == "table"
+        and MountMusicDB.mountMusicSelections
+    or selectedMountMusicValues
+local savedDruidFormMusicSelections = type(MountMusicDB.druidFormMusicSelections) == "table"
+        and MountMusicDB.druidFormMusicSelections
+    or selectedDruidFormMusicValues
 local selectedMountMusicDraft = copyMusicSelections(
     type(MountMusicDB.pendingMountMusicDraft) == "table"
         and MountMusicDB.pendingMountMusicDraft
-        or selectedMountMusicValues
+        or savedMountMusicSelections
 )
 local selectedDruidFormMusicDraft = copyMusicSelections(
     type(MountMusicDB.pendingDruidFormMusicDraft) == "table"
         and MountMusicDB.pendingDruidFormMusicDraft
-        or selectedDruidFormMusicValues
+        or savedDruidFormMusicSelections
 )
+local function persistDraftMusicSelections()
+    MountMusicDB.mountMusicSelections = copyMusicSelections(selectedMountMusicDraft)
+    MountMusicDB.druidFormMusicSelections = copyMusicSelections(selectedDruidFormMusicDraft)
+end
 local function saveDraftMusicSelections()
+    persistDraftMusicSelections()
     replaceMusicSelections(selectedMountMusicValues, selectedMountMusicDraft)
     replaceMusicSelections(selectedDruidFormMusicValues, selectedDruidFormMusicDraft)
     MountMusicDB.pendingMountMusicDraft = nil
     MountMusicDB.pendingDruidFormMusicDraft = nil
 end
 local saveButton
-local settingsContentFrames = {}
 local mountEntries = {}
-local druidFormContentHeight = 0
 local settingsRowsBuilt = false
-local nextUiRowId = 0
+local buildAssignmentPages
+local mountBook
+local druidBook
 local updateMusicPlayback
 local stopMusicNow
 local toggleMusicStop
 local toggleAutoPlay
 local playRandomMusic
-local playPreviousMusic
-local skipMusic
 local playAutoplayTrack
 local refreshMusicPlayer
 local refreshScreenAutoPlayButton
-local musicLibraryDropdown
 local currentMusicKey
 local currentMusicFileID
 local currentMusicTrackName
@@ -116,8 +125,6 @@ local button = {
 -- Register it with LibDBIcon directly
 LDBIcon:Register("MountMusic", button, MountMusicDB.minimap)
 
-
---City Music
 local musicTableStormwind = {
     ["stormwind 01 moment"] = 53202,
     ["stormwind 02 moment"] = 53202,
@@ -131,7 +138,6 @@ local musicTableStormwind = {
     ["stormwind intro moment"] = 53211
 
 }
-
 local musicTableOrgrimmar = {
     ["orgrimmar 01 moment"] = 53197,
     ["orgrimmar 01 zone"] = 53198,
@@ -140,7 +146,6 @@ local musicTableOrgrimmar = {
     ["orgrimmar intro moment"] = 53201
 
 }
-
 local musicTableThunderbluff = {
     ["thunderbluff intro"] = 53212,
     ["thunderbluff walking 01"] = 53213,
@@ -148,7 +153,6 @@ local musicTableThunderbluff = {
     ["thunderbluff walking 03"] = 53215
 
 }
-
 local musicTableUndercity = {
     ["undercity 01 zone"] = 53216,
     ["undercity 02 zone"] = 53217,
@@ -156,7 +160,6 @@ local musicTableUndercity = {
     ["undercityintro moment"] = 53219
 
 }
-
 local musicTableDarnassus = {
     ["Darnassus Intro"] = 53183,
     ["Darnassus Walking 1"] = 53184,
@@ -165,7 +168,6 @@ local musicTableDarnassus = {
     ["Druid Grove"] = 53187,
     ["Warrior Terrace"] = 53188
 }
-
 local musicTableIronforge = {
     ["Ironforge Intro"] = 53191,
     ["Ironforge Walking 01"] = 53192,
@@ -174,7 +176,6 @@ local musicTableIronforge = {
     ["Ironforge Walking 04"] = 53195,
     ["Tinkertown Intro Moment"] = 53196
 }
-
 local musicTableSilvermoon = {
     ["Silvermoon Intro"] = 53473,
     ["Silvermoon Walk Day 01"] = 53474,
@@ -185,22 +186,16 @@ local musicTableSilvermoon = {
     ["Silvermoon Walk Night 03"] = 53479,
     ["Scene Silver Purpose"] = 4888067
 }
-
 local musicTableGnomeregan = {
     ["Gnomeregan 01 Zone"] = 53189,
     ["Gnomeregan 02 Zone"] = 53190
 }
-
---Expansion themes --
 local musicTableExpansionThemes = {
     ["bc main theme"] = 53220,
     ["bccredits lament of the highborne"] = 53221,
     ["wotlk main title"] = 53222,
     ["wow main theme"] = 53223
 }
-
-
---Musical Moments --
 local musicTableBattle = {
     ["angelic01"] = 53224,
     ["battle01"] = 53225,
@@ -210,7 +205,6 @@ local musicTableBattle = {
     ["battle05"] = 53229,
     ["battle06"] = 53230,
 }
-
 local musicTableMagic = {
     ["gloomy01"] = 53231,
     ["gloomy02"] = 53232,
@@ -221,7 +215,6 @@ local musicTableMagic = {
     ["magic01 zone1"] = 53237,
     ["magic01 zone2"] = 53238,
 }
-
 local musicTableMystery = {
     ["mystery ahnqirajintro1"] = 53239,
     ["mystery01 zone"] = 53240,
@@ -235,7 +228,6 @@ local musicTableMystery = {
     ["mystery09 zone"] = 53248,
     ["mystery10 zone"] = 53249,
 }
-
 local musicTableMisc = {
     ["sacred01"] = 53250,
     ["sacred02"] = 53251,
@@ -250,10 +242,6 @@ local musicTableMisc = {
     ["hordefirepole"] = 53260,
 
 }
-
-
-
--- Zone music --
 local musicTableZoneVanilla = {
     ["Bloodmyst Isle Nagaintro 01"] = 53360,
     ["Bloodmyst Isle Satyr Walk Uni 01"] = 53362,
@@ -272,7 +260,6 @@ local musicTableZoneVanilla = {
     ["Night Desert 02"] = 53436,
     ["Night Desert 03"] = 53437
 }
-
 local musicTableZoneTbc = {
     ["Blades Edge Dry Forest Walk"] = 53350,
     ["Blades Edge Ogre Walk"] = 53358,
@@ -288,7 +275,6 @@ local musicTableZoneTbc = {
     ["Terokkar Forest Shattrath Walk Uni 02"] = 53807,
     ["Terokkar Forest Shattrath Walk Uni 03"] = 53808,
 }
-
 local musicTableZoneWrath = {
     ["Borean Tundra General Walk Day 01"] = 53367,
     ["Borean Tundra General Walk Day 02"] = 53368,
@@ -301,10 +287,6 @@ local musicTableZoneWrath = {
     ["Howling Fjord Tusk Kamagua Day 01"] = 53537,
     ["Howling Fjord Tusk Kamagua Day 02"] = 53538,
 }
-
-
---Raids --
--- Music table for Karazhan
 local musicTableKarazhan = {
     ["Backstage Walk Uni 01"] = 53547,
     ["Backstage Walk Uni 02"] = 53548,
@@ -329,8 +311,6 @@ local musicTableKarazhan = {
     ["Tower Walk Uni 02"] = 53575,
     ["Tower Walk Uni 03"] = 53576,
 }
-
--- Music table for Naxxramas
 local musicTableNaxxramas = {
     ["Abomination Boss 1"] = 53591,
     ["Abomination Boss 2"] = 53592,
@@ -362,8 +342,6 @@ local musicTableNaxxramas = {
     ["Walking 5"] = 53618,
     ["Walking 6"] = 53619
 }
-
--- Music table for Ahn'Qiraj
 local musicTableAhnQiraj = {
     ["Ahn'Qiraj Intro 1"] = 53261,
     ["Ahn'Qiraj Exterior Walking 1"] = 53262,
@@ -383,8 +361,6 @@ local musicTableAhnQiraj = {
     ["Ahn'Qiraj Triangle Room 5"] = 53276,
     ["Ahn'Qiraj Triangle Room 6"] = 53277
 }
-
--- Music table for Tempest Keep
 local musicTableTempestKeep = {
     ["Tempest Keep Amb 11"] = 53779,
     ["Tempest Keep Amb 12"] = 53780,
@@ -403,8 +379,6 @@ local musicTableTempestKeep = {
     ["Tempest Keep Stg 14"] = 53793,
     ["Tempest Keep Stg 15"] = 53794
 }
-
--- Music table for Black Temple
 local musicTableBlackTemple = {
     ["Arrival Walk Hero 01"] = 53305,
     ["Arrival Walk Uni 02"] = 53306,
@@ -431,8 +405,6 @@ local musicTableBlackTemple = {
     ["Summit Walk Uni 01"] = 53345,
     ["Summit Walk Uni 02"] = 53346
 }
-
--- Music table for Sunwell
 local musicTableSunwell = {
     ["Assembly Chamber Walk Uni 01"] = 53700,
     ["Assembly Chamber Walk Uni 02"] = 53701,
@@ -466,7 +438,6 @@ local musicTableSunwell = {
 local allMusicTracks = {}
 local seenMusicFileIDs = {}
 local musicTrackByFileID = {}
-local musicTrackIndexByFileID = {}
 for _, musicTable in ipairs({
     musicTableStormwind,
     musicTableOrgrimmar,
@@ -507,9 +478,6 @@ table.sort(allMusicTracks, function(left, right)
     end
     return leftLower < rightLower
 end)
-for index, track in ipairs(allMusicTracks) do
-    musicTrackIndexByFileID[track.fileID] = index
-end
 
 local function getRandomMusicTrack(excludedFileID)
     if #allMusicTracks == 0 then
@@ -557,34 +525,32 @@ end
 
 
 local mountTabButton = CreateFrame("Button", nil, mountMusicSettingsFrame, "UIPanelButtonTemplate")
-mountTabButton:SetSize(110, 26)
+mountTabButton:SetSize(140, 26)
 mountTabButton:SetPoint("TOPLEFT", 12, -42)
 mountTabButton:SetText("Mounts")
 mountTabButton:Hide()
 
 local druidTabButton = CreateFrame("Button", nil, mountMusicSettingsFrame, "UIPanelButtonTemplate")
-druidTabButton:SetSize(110, 26)
-druidTabButton:SetPoint("LEFT", mountTabButton, "RIGHT", 4, 0)
+druidTabButton:SetSize(140, 26)
+druidTabButton:SetPoint("LEFT", mountTabButton, "RIGHT", 12, 0)
 druidTabButton:SetText("Druid Forms")
 druidTabButton:Hide()
 
-local mountScrollFrame = CreateFrame("ScrollFrame", nil, mountMusicSettingsFrame, "UIPanelScrollFrameTemplate")
+local mountScrollFrame = CreateFrame("Frame", nil, mountMusicSettingsFrame)
 mountScrollFrame:SetPoint("TOPLEFT", 12, -75)
-mountScrollFrame:SetPoint("BOTTOMRIGHT", -35, 145)
+mountScrollFrame:SetPoint("BOTTOMRIGHT", -35, 60)
 mountScrollFrame:Hide()
 
-local mountScrollChild = CreateFrame("Frame")
-mountScrollChild:SetWidth(mmFrameWidth - 80)
-mountScrollFrame:SetScrollChild(mountScrollChild)
+local mountScrollChild = CreateFrame("Frame", nil, mountScrollFrame)
+mountScrollChild:SetAllPoints()
 
-local druidScrollFrame = CreateFrame("ScrollFrame", nil, mountMusicSettingsFrame, "UIPanelScrollFrameTemplate")
+local druidScrollFrame = CreateFrame("Frame", nil, mountMusicSettingsFrame)
 druidScrollFrame:SetPoint("TOPLEFT", 12, -75)
-druidScrollFrame:SetPoint("BOTTOMRIGHT", -35, 145)
+druidScrollFrame:SetPoint("BOTTOMRIGHT", -35, 60)
 druidScrollFrame:Hide()
 
-local druidScrollChild = CreateFrame("Frame")
-druidScrollChild:SetWidth(mmFrameWidth - 80)
-druidScrollFrame:SetScrollChild(druidScrollChild)
+local druidScrollChild = CreateFrame("Frame", nil, druidScrollFrame)
+druidScrollChild:SetAllPoints()
 
 local function selectSettingsTab(tab)
     if tab == "druid" then
@@ -594,6 +560,7 @@ local function selectSettingsTab(tab)
         end
     end
 
+    MountMusicDB.assignmentTab = tab
     mountTabButton:SetEnabled(tab ~= "mounts")
     druidTabButton:SetEnabled(tab ~= "druid")
     if settingsRowsBuilt then
@@ -642,35 +609,18 @@ closeButton:SetScript("OnClick", function()
     mountMusicSettingsFrame:Hide()
 end)
 
-local musicLibraryDropdownName = "mountMusicPlayerTrackDropdown"
-musicLibraryDropdown = CreateFrame("Frame", musicLibraryDropdownName, mountMusicSettingsFrame, "UIDropDownMenuTemplate")
-musicLibraryDropdown:SetPoint("BOTTOMLEFT", mountMusicSettingsFrame, "BOTTOMLEFT", -5, 110)
-musicLibraryDropdown:SetWidth(180)
-UIDropDownMenu_SetWidth(musicLibraryDropdown, 180)
-musicLibraryDropdown:SetFrameLevel(mountMusicSettingsFrame:GetFrameLevel() + 20)
-UIDropDownMenu_SetText(musicLibraryDropdown, "Select a track")
-local musicLibraryText = _G[musicLibraryDropdownName .. "Text"]
-if musicLibraryText then
-    musicLibraryText:SetFont("Fonts\\FRIZQT__.TTF", 14)
-    musicLibraryText:SetTextColor(1, 0.82, 0)
-end
-
-local playerTrackText = mountMusicSettingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-playerTrackText:SetPoint("TOPLEFT", musicLibraryText, "BOTTOMLEFT", 0, -12)
-playerTrackText:SetWidth(390)
-playerTrackText:SetJustifyH("LEFT")
-playerTrackText:SetText("...")
-
-local playerStatusText = mountMusicSettingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-playerStatusText:SetPoint("TOPLEFT", playerTrackText, "BOTTOMLEFT", 0, -2)
-playerStatusText:SetWidth(240)
-playerStatusText:SetJustifyH("LEFT")
-playerStatusText:SetText("No Music Playing")
-
 local screenTrackButton
 local refreshScreenTrackButton
-local screenTrackFrame = CreateFrame("Frame", "MountMusicScreenTrackFrame", UIParent, "TooltipBorderedFrameTemplate")
-screenTrackFrame:SetSize(200, 72)
+local screenTrackFrame = CreateFrame("Frame", "MountMusicScreenTrackFrame", UIParent, "BackdropTemplate")
+screenTrackFrame:SetSize(275, 78)
+screenTrackFrame:SetBackdrop({
+    bgFile = "Interface\\Buttons\\WHITE8X8",
+    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    edgeSize = 10,
+    insets = { left = 3, right = 3, top = 3, bottom = 3 },
+})
+screenTrackFrame:SetBackdropColor(0.035, 0.045, 0.06, 0.96)
+screenTrackFrame:SetBackdropBorderColor(0.72, 0.56, 0.28, 0.9)
 screenTrackFrame:SetFrameStrata("DIALOG")
 screenTrackFrame:SetClampedToScreen(true)
 screenTrackFrame:SetMovable(true)
@@ -694,8 +644,8 @@ screenTrackFrame:SetScript("OnDragStop", function(self)
 end)
 
 local screenTrackCloseButton = CreateFrame("Button", nil, screenTrackFrame, "UIPanelCloseButton")
-screenTrackCloseButton:SetSize(18, 18)
-screenTrackCloseButton:SetPoint("TOPRIGHT", -1, -1)
+screenTrackCloseButton:SetSize(16, 16)
+screenTrackCloseButton:SetPoint("TOPRIGHT", -4, -4)
 screenTrackCloseButton:SetScript("OnClick", function()
     MountMusicDB.screenTrackVisible = false
     screenTrackFrame:Hide()
@@ -705,32 +655,33 @@ screenTrackCloseButton:SetScript("OnClick", function()
 end)
 
 local screenTrackNameText = screenTrackFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-screenTrackNameText:SetPoint("TOPLEFT", 8, -8)
-screenTrackNameText:SetWidth(165)
-screenTrackNameText:SetFontObject(GameFontNormalSmall)
+screenTrackNameText:SetPoint("TOPLEFT", 18, -10)
+screenTrackNameText:SetWidth(220)
+screenTrackNameText:SetFontObject(GameFontNormal)
 screenTrackNameText:SetJustifyH("LEFT")
 screenTrackNameText:SetWordWrap(false)
+screenTrackNameText:SetTextColor(1, 0.88, 0.62)
 screenTrackNameText:SetText("No Music Playing")
 
 local screenTrackStatusText = screenTrackFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-screenTrackStatusText:SetPoint("TOPLEFT", screenTrackNameText, "BOTTOMLEFT", 0, -2)
-screenTrackStatusText:SetWidth(165)
+screenTrackStatusText:SetPoint("TOPLEFT", screenTrackNameText, "BOTTOMLEFT", 0, -3)
+screenTrackStatusText:SetWidth(220)
 screenTrackStatusText:SetJustifyH("LEFT")
 screenTrackStatusText:SetWordWrap(false)
+screenTrackStatusText:SetTextColor(0.65, 0.69, 0.74)
 screenTrackStatusText:SetText("No Music Playing")
 
-local screenPreviousButton = CreateFrame("Button", nil, screenTrackFrame)
-screenPreviousButton:SetSize(22, 22)
-screenPreviousButton:SetPoint("BOTTOMLEFT", 10, 5)
-screenPreviousButton:SetNormalTexture("Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Up")
-screenPreviousButton:SetPushedTexture("Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Down")
-screenPreviousButton:SetScript("OnClick", function()
-    playPreviousMusic()
-end)
+local screenTrackAccent = screenTrackFrame:CreateTexture(nil, "ARTWORK")
+screenTrackAccent:SetPoint("TOPLEFT", 10, -10)
+screenTrackAccent:SetSize(3, 30)
+screenTrackAccent:SetTexture("Interface\\Buttons\\WHITE8X8")
+screenTrackAccent:SetVertexColor(0.92, 0.68, 0.28, 0.95)
 
 local screenStopButton = CreateFrame("Button", nil, screenTrackFrame)
-screenStopButton:SetSize(26, 26)
-screenStopButton:SetPoint("LEFT", screenPreviousButton, "RIGHT", 5, 0)
+screenStopButton:SetSize(28, 26)
+screenStopButton:SetPoint("BOTTOMLEFT", 10, 7)
+screenStopButton:SetHighlightTexture("Interface\\Buttons\\WHITE8X8", "BLEND")
+screenStopButton:GetHighlightTexture():SetVertexColor(0.82, 0.62, 0.3, 0.18)
 local screenStopIcon = screenStopButton:CreateTexture(nil, "ARTWORK")
 screenStopIcon:SetSize(10, 10)
 screenStopIcon:SetPoint("CENTER")
@@ -750,17 +701,16 @@ screenStopButton:SetScript("OnClick", function()
     toggleMusicStop()
 end)
 
-local screenSkipButton = CreateFrame("Button", nil, screenTrackFrame)
-screenSkipButton:SetSize(22, 22)
-screenSkipButton:SetPoint("LEFT", screenStopButton, "RIGHT", 5, 0)
-screenSkipButton:SetNormalTexture("Interface\\Buttons\\UI-SpellbookIcon-NextPage-Up")
-screenSkipButton:SetPushedTexture("Interface\\Buttons\\UI-SpellbookIcon-NextPage-Down")
-screenSkipButton:SetScript("OnClick", function()
-    skipMusic()
+local screenRandomTrackButton = CreateFrame("Button", nil, screenTrackFrame, "UIPanelButtonTemplate")
+screenRandomTrackButton:SetSize(120, 24)
+screenRandomTrackButton:SetPoint("LEFT", screenStopButton, "RIGHT", 6, 0)
+screenRandomTrackButton:SetText("Random Track")
+screenRandomTrackButton:SetScript("OnClick", function()
+    playRandomMusic()
 end)
 local screenAutoPlayButton = CreateFrame("Button", nil, screenTrackFrame, "UIPanelButtonTemplate")
 screenAutoPlayButton:SetSize(100, 24)
-screenAutoPlayButton:SetPoint("BOTTOMRIGHT", -8, 5)
+screenAutoPlayButton:SetPoint("BOTTOMRIGHT", -10, 7)
 refreshScreenAutoPlayButton = function()
     screenAutoPlayButton:SetText(MountMusicDB.autoPlayEnabled and "Auto Play: On" or "Auto Play: Off")
 end
@@ -768,6 +718,28 @@ refreshScreenAutoPlayButton()
 screenAutoPlayButton:SetScript("OnClick", function()
     toggleAutoPlay()
 end)
+
+local function styleScreenActionButton(button)
+    local normalTexture = button:GetNormalTexture()
+    if normalTexture then
+        normalTexture:SetTexture("Interface\\Buttons\\WHITE8X8")
+        normalTexture:SetVertexColor(0.12, 0.14, 0.17, 0.95)
+    end
+    local pushedTexture = button:GetPushedTexture()
+    if pushedTexture then
+        pushedTexture:SetTexture("Interface\\Buttons\\WHITE8X8")
+        pushedTexture:SetVertexColor(0.34, 0.25, 0.12, 0.95)
+    end
+    button:SetHighlightTexture("Interface\\Buttons\\WHITE8X8", "BLEND")
+    button:GetHighlightTexture():SetVertexColor(0.82, 0.62, 0.3, 0.22)
+    local label = button:GetFontString()
+    if label then
+        label:SetTextColor(0.96, 0.9, 0.76)
+    end
+end
+
+styleScreenActionButton(screenRandomTrackButton)
+styleScreenActionButton(screenAutoPlayButton)
 
 if MountMusicDB.screenTrackVisible then
     screenTrackFrame:Show()
@@ -784,24 +756,11 @@ local function setControlTooltip(button, text)
     button:SetScript("OnLeave", GameTooltip_Hide)
 end
 
-setControlTooltip(screenPreviousButton, "Play Previous Song")
-setControlTooltip(screenSkipButton, "Play Random Track")
 setControlTooltip(screenStopButton, "Stop Music")
-
-local previousButton = CreateFrame("Button", nil, mountMusicSettingsFrame)
-previousButton:SetSize(26, 26)
-previousButton:SetPoint("BOTTOMLEFT", 12, 14)
-previousButton:SetNormalTexture("Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Up")
-previousButton:SetPushedTexture("Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Down")
-previousButton:SetDisabledTexture("Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Disabled")
-setControlTooltip(previousButton, "Play Previous Song")
-previousButton:SetScript("OnClick", function()
-    playPreviousMusic()
-end)
 
 local stopButton = CreateFrame("Button", nil, mountMusicSettingsFrame)
 stopButton:SetSize(30, 26)
-stopButton:SetPoint("LEFT", previousButton, "RIGHT", 6, 0)
+stopButton:SetPoint("BOTTOMLEFT", 12, 14)
 local stopIcon = stopButton:CreateTexture(nil, "ARTWORK")
 stopIcon:SetSize(12, 12)
 stopIcon:SetPoint("CENTER")
@@ -847,20 +806,17 @@ stopButton:SetScript("OnClick", function()
     toggleMusicStop()
 end)
 
-local skipButton = CreateFrame("Button", nil, mountMusicSettingsFrame)
-skipButton:SetSize(26, 26)
-skipButton:SetPoint("LEFT", stopButton, "RIGHT", 6, 0)
-skipButton:SetNormalTexture("Interface\\Buttons\\UI-SpellbookIcon-NextPage-Up")
-skipButton:SetPushedTexture("Interface\\Buttons\\UI-SpellbookIcon-NextPage-Down")
-skipButton:SetDisabledTexture("Interface\\Buttons\\UI-SpellbookIcon-NextPage-Disabled")
-setControlTooltip(skipButton, "Play Random Track")
-skipButton:SetScript("OnClick", function()
-    skipMusic()
+local randomTrackButton = CreateFrame("Button", nil, mountMusicSettingsFrame, "UIPanelButtonTemplate")
+randomTrackButton:SetSize(140, 26)
+randomTrackButton:SetPoint("LEFT", stopButton, "RIGHT", 6, 0)
+randomTrackButton:SetText("Random Track")
+randomTrackButton:SetScript("OnClick", function()
+    playRandomMusic()
 end)
 
 local autoPlayButton = CreateFrame("Button", nil, mountMusicSettingsFrame, "UIPanelButtonTemplate")
 autoPlayButton:SetSize(112, 26)
-autoPlayButton:SetPoint("LEFT", skipButton, "RIGHT", 8, 0)
+autoPlayButton:SetPoint("LEFT", randomTrackButton, "RIGHT", 8, 0)
 local function refreshAutoPlayButton()
     autoPlayButton:SetText(MountMusicDB.autoPlayEnabled and "Auto Play: On" or "Auto Play: Off")
 end
@@ -910,439 +866,10 @@ local function sortedMusicPairs(musicTable)
     end
 end
 
---Create Mount Music ui components for the options panel
-local function createMountUiElements(container, yPos, formName, formIcon, mountData)
-    local x = 10
-    local creatureName, creatureID, icon, isCollected
-    if formName then
-        creatureName, creatureID, icon = formName, formName, formIcon
-    elseif mountData then
-        creatureName, creatureID, icon, isCollected = mountData.name, mountData.spellID, mountData.icon,
-            mountData.isCollected
-    end
-    if not creatureName or not creatureID then
-        return
-    end
-
-    local frame = CreateFrame("Frame", nil, container, "ToolTipBorderedFrameTemplate")
-    frame:SetPoint("TOPLEFT", x, -yPos)
-    frame:SetWidth(container:GetWidth() - (x * 2))
-    frame:SetHeight(44)
-    table.insert(settingsContentFrames, frame)
-
-    local mountIconButton = CreateFrame("Button", nil, frame)
-
-    mountIconButton:SetSize(44, 44)
-    mountIconButton:SetPoint("LEFT", 14, 0)
-    if not formName then
-        if not mountData or mountData.isCollected then
-            mountIconButton:SetScript("OnClick", function()
-                CastSpellByName(creatureName)
-            end)
-        else
-            mountIconButton:SetScript("OnEnter", function(self)
-                GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                GameTooltip:AddLine("Mount not acquired yet", 1, 0.82, 0)
-                GameTooltip:Show()
-            end)
-            mountIconButton:SetScript("OnLeave", GameTooltip_Hide)
-        end
-    end
-
-    mountIconButton.Texture = mountIconButton:CreateTexture(nil, "ARTWORK")
-    mountIconButton.Texture:SetPoint("TOPLEFT", 5, -5)
-    mountIconButton.Texture:SetPoint("BOTTOMRIGHT", -5, 5)
-    mountIconButton.Texture:SetTexture(icon)
-    if mountData and not mountData.isCollected then
-        mountIconButton.Texture:SetDesaturated(true)
-        mountIconButton.Texture:SetVertexColor(0.45, 0.45, 0.45)
-    end
-
-    frame.Text = frame:CreateFontString(nil, "OVERLAY", "GameTooltipText")
-    frame.Text:SetPoint("LEFT", 60, 0)
-    frame.Text:SetWidth(frame:GetWidth() - 255)
-    frame.Text:SetWordWrap(true)
-    frame.Text:SetJustifyH("LEFT")
-    frame.Text:SetText(creatureName)
-    if mountData and not mountData.isCollected then
-        frame.Text:SetTextColor(0.55, 0.55, 0.55)
-    end
-
-
-    nextUiRowId = nextUiRowId + 1
-    local dropDownName = "mountMusicUiDropdown" .. nextUiRowId
-    local dropDown = CreateFrame("Frame", dropDownName, frame, "UIDropDownMenuTemplate")
-    dropDown:SetPoint("RIGHT", -8, 0)
-    dropDown:SetWidth(180)
-    UIDropDownMenu_SetWidth(dropDown, 180)
-
-    -- Set visible label font
-    local textRegion = _G[dropDownName .. "Text"]
-    if textRegion then
-        textRegion:SetFont("Fonts\\FRIZQT__.TTF", 14)
-        textRegion:SetTextColor(1, 0.82, 0)
-    end
-
-    local musicValues = formName and selectedDruidFormMusicDraft or selectedMountMusicDraft
-    if musicValues[creatureID] then
-        local selectedSongName, selectedSongFileID = next(musicValues[creatureID])
-        UIDropDownMenu_SetSelectedValue(dropDown, selectedSongFileID)
-        UIDropDownMenu_SetText(dropDown, selectedSongName)
-    else
-        UIDropDownMenu_SetText(dropDown, "Select a song")
-    end
-    local function setDraftSelection(songName, fileID)
-        UIDropDownMenu_SetSelectedValue(dropDown, fileID)
-        UIDropDownMenu_SetText(dropDown, songName)
-        musicValues[creatureID] = { [songName] = fileID }
-        MountMusicDB.pendingMountMusicDraft = copyMusicSelections(selectedMountMusicDraft)
-        MountMusicDB.pendingDruidFormMusicDraft = copyMusicSelections(selectedDruidFormMusicDraft)
-        saveButton:SetText("Save")
-        saveButton:SetEnabled(true)
-    end
-
-    local function handleDropdownSelect(self)
-        setDraftSelection(self:GetText(), self.value)
-    end
-
-    if mountData and not mountData.isCollected then
-        UIDropDownMenu_DisableDropDown(dropDown)
-    end
-
-    UIDropDownMenu_Initialize(dropDown, function(self, level, menuList)
-        local info = UIDropDownMenu_CreateInfo()
-        local selectedSongName, selectedSongFileId
-
-        if musicValues[creatureID] then
-            selectedSongName, selectedSongFileId = next(musicValues[creatureID])
-        end
-
-        -- Top Level --
-        if level == 1 then
-            local rootItems = {
-                {
-                    text = "Assign Random",
-                    value = "assignRandom",
-                    func = function()
-                        local track = getRandomMusicTrack()
-                        if not track then
-                            print("MountMusic: No music tracks are available.")
-                            return
-                        end
-                        setDraftSelection(track.name, track.fileID)
-                    end,
-                },
-                { text = "City Music", menuList = "cityMusic" },
-                { text = "Expansion Themes", menuList = "expansionThemes" },
-                { text = "Musical Moments", menuList = "musicMoments" },
-                {
-                    text = "No Music",
-                    value = "noMusic",
-                    checked = selectedSongFileId == "noMusic",
-                    func = handleDropdownSelect,
-                },
-                { text = "Raids", menuList = "raids" },
-                { text = "Zone Music", menuList = "zoneMusic" },
-            }
-            table.sort(rootItems, function(left, right)
-                return string.lower(left.text) < string.lower(right.text)
-            end)
-            for _, item in ipairs(rootItems) do
-                info.text = item.text
-                info.value = item.value
-                info.hasArrow = item.menuList and true or nil
-                info.menuList = item.menuList
-                info.checked = item.checked or false
-                info.func = item.func
-                info.fontObject = GameFontNormal
-                UIDropDownMenu_AddButton(info, level)
-            end
-        end
-
-        --Second Level --
-        if menuList == "cityMusic" then
-            info.value = nil
-            info.func = nil
-            info.hasArrow = true
-            info.fontObject = GameFontNormal
-            info.text, info.menuList = "Darnassus", "darnassus"
-            UIDropDownMenu_AddButton(info, level)
-            info.text, info.menuList = "Gnomeregan", "gnomeregan"
-            UIDropDownMenu_AddButton(info, level)
-            info.text, info.menuList = "Ironforge", "ironforge"
-            UIDropDownMenu_AddButton(info, level)
-            info.text, info.menuList = "Orgrimmar", "orgrimmar"
-            UIDropDownMenu_AddButton(info, level)
-            info.text, info.menuList = "Silvermoon", "silvermoon"
-            UIDropDownMenu_AddButton(info, level)
-            info.text, info.menuList = "Stormwind", "stormwind"
-            UIDropDownMenu_AddButton(info, level)
-            info.text, info.menuList = "Thunderbluff", "thunderbluff"
-            UIDropDownMenu_AddButton(info, level)
-        elseif menuList == "expansionThemes" then
-            for key, value in sortedMusicPairs(musicTableExpansionThemes) do
-                info.text = tostring(key)
-                info.fontObject = GameFontNormal
-                info.value = value
-                info.checked = selectedSongName == key
-                info.func = handleDropdownSelect
-                UIDropDownMenu_AddButton(info, level)
-            end
-        elseif menuList == "musicMoments" then
-            info.value = nil
-            info.func = nil
-            info.checked = false
-            info.hasArrow = true
-            info.fontObject = GameFontNormal
-            info.text, info.menuList = "Battle", "battle"
-            UIDropDownMenu_AddButton(info, level)
-            info.text, info.menuList = "Magic", "magic"
-            UIDropDownMenu_AddButton(info, level)
-            info.text, info.menuList = "Misc", "misc"
-            UIDropDownMenu_AddButton(info, level)
-            info.text, info.menuList = "Mystery", "mystery"
-            UIDropDownMenu_AddButton(info, level)
-        elseif menuList == "zoneMusic" then
-            info.value = nil
-            info.func = nil
-            info.checked = false
-            info.hasArrow = true
-            info.fontObject = GameFontNormal
-            info.text, info.menuList = "Burning Crusade", "burningCrusade"
-            UIDropDownMenu_AddButton(info, level)
-            info.text, info.menuList = "Lich King", "lichKing"
-            UIDropDownMenu_AddButton(info, level)
-            info.text, info.menuList = "Vanilla", "vanilla"
-            UIDropDownMenu_AddButton(info, level)
-        elseif menuList == "raids" then
-            info.value = nil
-            info.func = nil
-            info.checked = false
-            info.hasArrow = true
-            info.fontObject = GameFontNormal
-            info.text, info.menuList = "Ahn Quiraj", "ahnQuiraj"
-            UIDropDownMenu_AddButton(info, level)
-            info.text, info.menuList = "Black Temple", "blackTemple"
-            UIDropDownMenu_AddButton(info, level)
-            info.text, info.menuList = "Karazhan", "karazhan"
-            UIDropDownMenu_AddButton(info, level)
-            info.text, info.menuList = "Naxxramas", "naxxramas"
-            UIDropDownMenu_AddButton(info, level)
-            info.text, info.menuList = "Sunwell", "sunwell"
-            UIDropDownMenu_AddButton(info, level)
-            info.text, info.menuList = "Tempest Keep", "tempestKeep"
-            UIDropDownMenu_AddButton(info, level)
-        end
-
-        --City Level --
-        if menuList == "stormwind" then
-            for key, value in sortedMusicPairs(musicTableStormwind) do
-                info.text = tostring(key)
-                info.fontObject = GameFontNormal
-                info.value = value
-                info.checked = selectedSongName == key
-                info.func = handleDropdownSelect
-                UIDropDownMenu_AddButton(info, level)
-            end
-        elseif menuList == "orgrimmar" then
-            for key, value in sortedMusicPairs(musicTableOrgrimmar) do
-                info.text = tostring(key)
-                info.fontObject = GameFontNormal
-                info.value = value
-                info.checked = selectedSongName == key
-                info.func = handleDropdownSelect
-                UIDropDownMenu_AddButton(info, level)
-            end
-        elseif menuList == "thunderbluff" then
-            for key, value in sortedMusicPairs(musicTableThunderbluff) do
-                info.text = tostring(key)
-                info.fontObject = GameFontNormal
-                info.value = value
-                info.checked = selectedSongName == key
-                info.func = handleDropdownSelect
-                UIDropDownMenu_AddButton(info, level)
-            end
-        elseif menuList == "undercity" then
-            for key, value in sortedMusicPairs(musicTableUndercity) do
-                info.text = tostring(key)
-                info.value = value
-                info.checked = selectedSongName == key
-                info.fontObject = GameFontNormal
-                info.func = handleDropdownSelect
-                UIDropDownMenu_AddButton(info, level)
-            end
-        elseif menuList == "darnassus" then
-            for key, value in sortedMusicPairs(musicTableDarnassus) do
-                info.text = tostring(key)
-                info.fontObject = GameFontNormal
-                info.value = value
-                info.checked = selectedSongName == key
-                info.func = handleDropdownSelect
-                UIDropDownMenu_AddButton(info, level)
-            end
-        elseif menuList == "ironforge" then
-            for key, value in sortedMusicPairs(musicTableIronforge) do
-                info.text = tostring(key)
-                info.fontObject = GameFontNormal
-                info.value = value
-                info.checked = selectedSongName == key
-                info.func = handleDropdownSelect
-                UIDropDownMenu_AddButton(info, level)
-            end
-        elseif menuList == "silvermoon" then
-            for key, value in sortedMusicPairs(musicTableSilvermoon) do
-                info.text = tostring(key)
-                info.fontObject = GameFontNormal
-                info.value = value
-                info.checked = selectedSongName == key
-                info.func = handleDropdownSelect
-                UIDropDownMenu_AddButton(info, level)
-            end
-        elseif menuList == "gnomeregan" then
-            for key, value in sortedMusicPairs(musicTableGnomeregan) do
-                info.text = tostring(key)
-                info.fontObject = GameFontNormal
-                info.value = value
-                info.checked = selectedSongName == key
-                info.func = handleDropdownSelect
-                UIDropDownMenu_AddButton(info, level)
-            end
-        end
-
-        --Magical Moments --
-        if menuList == "battle" then
-            for key, value in sortedMusicPairs(musicTableBattle) do
-                info.text = tostring(key)
-                info.fontObject = GameFontNormal
-                info.value = value
-                info.checked = selectedSongName == key
-                info.func = handleDropdownSelect
-                UIDropDownMenu_AddButton(info, level)
-            end
-        elseif menuList == "magic" then
-            for key, value in sortedMusicPairs(musicTableMagic) do
-                info.text = tostring(key)
-                info.fontObject = GameFontNormal
-                info.value = value
-                info.checked = selectedSongName == key
-                info.func = handleDropdownSelect
-                UIDropDownMenu_AddButton(info, level)
-            end
-        elseif menuList == "mystery" then
-            for key, value in sortedMusicPairs(musicTableMystery) do
-                info.text = tostring(key)
-                info.fontObject = GameFontNormal
-                info.value = value
-                info.checked = selectedSongName == key
-                info.func = handleDropdownSelect
-                UIDropDownMenu_AddButton(info, level)
-            end
-        elseif menuList == "misc" then
-            for key, value in sortedMusicPairs(musicTableMisc) do
-                info.text = tostring(key)
-                info.fontObject = GameFontNormal
-                info.value = value
-                info.checked = selectedSongName == key
-                info.func = handleDropdownSelect
-                UIDropDownMenu_AddButton(info, level)
-            end
-        end
-
-
-
-        --Zone Music --
-        if menuList == "vanilla" then
-            for key, value in sortedMusicPairs(musicTableZoneVanilla) do
-                info.text = tostring(key)
-                info.fontObject = GameFontNormal
-                info.value = value
-                info.checked = selectedSongName == key
-                info.func = handleDropdownSelect
-                UIDropDownMenu_AddButton(info, level)
-            end
-        elseif menuList == "burningCrusade" then
-            for key, value in sortedMusicPairs(musicTableZoneTbc) do
-                info.text = tostring(key)
-                info.fontObject = GameFontNormal
-                info.value = value
-                info.checked = selectedSongName == key
-                info.func = handleDropdownSelect
-                UIDropDownMenu_AddButton(info, level)
-            end
-        elseif menuList == "lichKing" then
-            for key, value in sortedMusicPairs(musicTableZoneWrath) do
-                info.text = tostring(key)
-                info.fontObject = GameFontNormal
-                info.value = value
-                info.checked = selectedSongName == key
-                info.func = handleDropdownSelect
-                UIDropDownMenu_AddButton(info, level)
-            end
-        end
-
-
-        --Raids --
-        if menuList == "karazhan" then
-            for key, value in sortedMusicPairs(musicTableKarazhan) do
-                info.text = tostring(key)
-                info.fontObject = GameFontNormal
-                info.value = value
-                info.checked = selectedSongName == key
-                info.func = handleDropdownSelect
-                UIDropDownMenu_AddButton(info, level)
-            end
-        elseif menuList == "naxxramas" then
-            for key, value in sortedMusicPairs(musicTableNaxxramas) do
-                info.text = tostring(key)
-                info.fontObject = GameFontNormal
-                info.value = value
-                info.checked = selectedSongName == key
-                info.func = handleDropdownSelect
-                UIDropDownMenu_AddButton(info, level)
-            end
-        elseif menuList == "ahnQuiraj" then
-            for key, value in sortedMusicPairs(musicTableAhnQiraj) do
-                info.text = tostring(key)
-                info.fontObject = GameFontNormal
-                info.value = value
-                info.checked = selectedSongName == key
-                info.func = handleDropdownSelect
-                UIDropDownMenu_AddButton(info, level)
-            end
-        elseif menuList == "tempestKeep" then
-            for key, value in sortedMusicPairs(musicTableTempestKeep) do
-                info.text = tostring(key)
-                info.fontObject = GameFontNormal
-                info.value = value
-                info.checked = selectedSongName == key
-                info.func = handleDropdownSelect
-                UIDropDownMenu_AddButton(info, level)
-            end
-        elseif menuList == "blackTemple" then
-            for key, value in sortedMusicPairs(musicTableBlackTemple) do
-                info.text = tostring(key)
-                info.fontObject = GameFontNormal
-                info.value = value
-                info.checked = selectedSongName == key
-                info.func = handleDropdownSelect
-                UIDropDownMenu_AddButton(info, level)
-            end
-        elseif menuList == "sunwell" then
-            for key, value in sortedMusicPairs(musicTableSunwell) do
-                info.text = tostring(key)
-                info.fontObject = GameFontNormal
-                info.value = value
-                info.checked = selectedSongName == key
-                info.func = handleDropdownSelect
-                UIDropDownMenu_AddButton(info, level)
-            end
-        end
-    end)
-
-    return frame
+local function setModernHoverHighlight(button)
+    button:SetHighlightTexture("Interface\\Buttons\\WHITE8X8", "BLEND")
+    button:GetHighlightTexture():SetVertexColor(0.82, 0.58, 0.16, 0.22)
 end
-
-
 
 local druidFormDefinitions = {
     { name = "Bear Form", spellID = 5487, fallbackIcon = "Interface\\Icons\\Ability_Racial_BearForm" },
@@ -1422,58 +949,22 @@ local function getDruidFormIcon(form)
     return form.fallbackIcon
 end
 
-local function createDruidFormUiElements()
-    local _, classToken = UnitClass("player")
-    if classToken ~= "DRUID" then
-        return 0
-    end
-
-    local yPos = 8
-    for _, form in ipairs(druidFormDefinitions) do
-        createMountUiElements(druidScrollChild, yPos, form.name, getDruidFormIcon(form))
-        yPos = yPos + 44
-    end
-
-    return yPos + 8
-end
-
 local function buildSettingsRows()
-    for _, frame in ipairs(settingsContentFrames) do
-        frame:Hide()
-    end
-    wipe(settingsContentFrames)
-
     mountEntries = getMountJournalEntries()
-    mountScrollFrame:SetVerticalScroll(0)
-    druidScrollFrame:SetVerticalScroll(0)
-    local yPos = 8
-    for _, mountData in ipairs(mountEntries) do
-        createMountUiElements(mountScrollChild, yPos, nil, nil, mountData)
-        yPos = yPos + 44
-    end
-    mountScrollChild:SetHeight(math.max(mountScrollFrame:GetHeight(), yPos + 8))
+    buildAssignmentPages()
 
     local _, classToken = UnitClass("player")
-    if classToken == "DRUID" then
-        druidFormContentHeight = createDruidFormUiElements()
-        druidScrollChild:SetHeight(math.max(druidScrollFrame:GetHeight(), druidFormContentHeight))
-        druidTabButton:Show()
-    else
-        druidFormContentHeight = 0
-        druidTabButton:Hide()
-    end
-
     mountTabButton:Show()
+    druidTabButton:SetShown(classToken == "DRUID")
     settingsRowsBuilt = true
-    selectSettingsTab("mounts")
+    local initialTab = classToken == "DRUID" and MountMusicDB.assignmentTab == "druid"
+        and "druid" or "mounts"
+    selectSettingsTab(initialTab)
 end
 
 
 -- Track and manage the selected mount/form music.
 local manualPlaySequence = 0
-local playbackHistory = {}
-local playbackHistoryPosition = 0
-local navigatingPlaybackHistory = false
 local formTransitionToken = 0
 local formTransitionPending = false
 
@@ -1599,17 +1090,6 @@ local function getActiveMusicTarget()
 end
 
 refreshMusicPlayer = function()
-    if currentMusicFileID then
-        playerTrackText:SetText(currentMusicTrackName or "Now Playing")
-        if musicLibraryDropdown and musicTrackByFileID[currentMusicFileID] then
-            MountMusicDB.playerLibraryTrackFileID = currentMusicFileID
-            UIDropDownMenu_SetSelectedValue(musicLibraryDropdown, currentMusicFileID)
-            UIDropDownMenu_SetText(musicLibraryDropdown, currentMusicTrackName or "Select a track")
-        end
-    else
-        playerTrackText:SetText("...")
-    end
-
     local playbackState
     if MountMusicDB.musicStoppedByAddon or GetCVar("Sound_EnableMusic") == "0" then
         playbackState = "Stopped"
@@ -1618,30 +1098,19 @@ refreshMusicPlayer = function()
     else
         playbackState = "No Music Playing"
     end
-    playerStatusText:SetText(
-        playbackState .. (currentActiveTargetName and " - " .. currentActiveTargetName or "")
-    )
     local screenTrackName = currentMusicTrackName or "No Music Playing"
     if #screenTrackName > 24 then
         screenTrackName = screenTrackName:sub(1, 21) .. "..."
     end
     screenTrackNameText:SetText(screenTrackName)
     screenTrackStatusText:SetText(playbackState)
-end
-
-local function recordMusicHistory(fileID)
-    if navigatingPlaybackHistory or not musicTrackIndexByFileID[fileID] then
-        return
+    if playbackState == "Playing" then
+        screenTrackStatusText:SetTextColor(0.48, 0.82, 0.58)
+    elseif playbackState == "Stopped" then
+        screenTrackStatusText:SetTextColor(0.92, 0.68, 0.34)
+    else
+        screenTrackStatusText:SetTextColor(0.65, 0.69, 0.74)
     end
-    if playbackHistory[playbackHistoryPosition] == fileID then
-        return
-    end
-
-    while #playbackHistory > playbackHistoryPosition do
-        table.remove(playbackHistory)
-    end
-    table.insert(playbackHistory, fileID)
-    playbackHistoryPosition = #playbackHistory
 end
 
 local function stopCurrentMusic(forceStop)
@@ -1683,7 +1152,6 @@ local function startMusicTrack(fileID, trackKey, trackName)
     currentMusicStartedAt = GetTime()
     currentMusicTrackName = trackName or (musicTrackByFileID[fileID] and musicTrackByFileID[fileID].name)
         or tostring(fileID)
-    recordMusicHistory(fileID)
     refreshMusicPlayer()
     return true
 end
@@ -1743,88 +1211,464 @@ local playerMusicTablesByMenuList = {
     vanilla = musicTableZoneVanilla,
 }
 
-local function playPlayerDropdownTrack(button)
-    manualPlaySequence = manualPlaySequence + 1
-    if startMusicTrack(button.value, "manual:library:" .. manualPlaySequence, button:GetText()) then
-        MountMusicDB.playerLibraryTrackFileID = button.value
-        manualPlaybackOverride = true
-        manualPlaybackTargetKey = getActiveMusicTarget()
-        UIDropDownMenu_SetSelectedValue(musicLibraryDropdown, button.value)
-        UIDropDownMenu_SetText(musicLibraryDropdown, button:GetText())
+local assignmentAccordionRoots = {
+    { text = "City Music", menuList = "cityMusic", children = playerMenuCategories.cityMusic },
+    { text = "Expansion Themes", menuList = "expansionThemes" },
+    { text = "Musical Moments", menuList = "musicMoments", children = playerMenuCategories.musicMoments },
+    { text = "Raids", menuList = "raids", children = playerMenuCategories.raids },
+    { text = "Zone Music", menuList = "zoneMusic", children = playerMenuCategories.zoneMusic },
+}
+
+local function setCollectionHover(button)
+    setModernHoverHighlight(button)
+end
+
+local function getBookSelection(book)
+    if not book.selectedEntity then
+        return nil, nil
+    end
+    local selections = book.kind == "mount" and selectedMountMusicDraft or selectedDruidFormMusicDraft
+    local assignment = selections[book.selectedEntity.id]
+    if assignment then
+        return next(assignment)
+    end
+    return nil, nil
+end
+
+local function refreshBookSelection(book)
+    local entity = book.selectedEntity
+    if not entity then
+        book.entityTitle:SetText(book.pageTitle)
+        book.assignmentText:SetText("Select an entry on the left")
+        book.randomButton:SetEnabled(false)
+        book.noMusicButton:SetEnabled(false)
+    else
+        local songName, fileID = getBookSelection(book)
+        book.entityTitle:SetText(entity.name)
+        book.assignmentText:SetText(
+            fileID == "noMusic" and "Assigned: No Music"
+                or songName and ("Assigned: " .. songName)
+                or "No song assigned"
+        )
+        local canAssign = book.kind ~= "mount" or entity.isCollected ~= false
+        book.randomButton:SetEnabled(canAssign)
+        book.noMusicButton:SetEnabled(canAssign)
+    end
+    book.playNowButton:SetEnabled(book.previewTrackFileID ~= nil)
+
+    for _, row in ipairs(book.entityRows) do
+        if row.entity then
+            row.selectionTexture:SetShown(entity and row.entity.id == entity.id)
+            local selections = book.kind == "mount" and selectedMountMusicDraft or selectedDruidFormMusicDraft
+            local assignment = selections[row.entity.id]
+            local songName, fileID
+            if assignment then
+                songName, fileID = next(assignment)
+            end
+            local assignmentLabel = fileID == "noMusic" and "No Music"
+                or songName or "Choose a song"
+            if book.kind == "mount" and row.entity.isCollected == false then
+                assignmentLabel = "Locked - " .. assignmentLabel
+            end
+            row.assignmentText:SetText(assignmentLabel)
+        end
+    end
+
+    if book.renderAccordion then
+        book.renderAccordion()
     end
 end
 
-local function addPlayerDropdownTracks(musicTable, level)
-    for trackName, fileID in sortedMusicPairs(musicTable) do
-        local info = UIDropDownMenu_CreateInfo()
-        info.text = trackName
-        info.value = fileID
-        info.checked = MountMusicDB.playerLibraryTrackFileID == fileID
-        info.fontObject = GameFontNormal
-        info.func = playPlayerDropdownTrack
-        UIDropDownMenu_AddButton(info, level)
+local function assignBookTrack(book, songName, fileID)
+    if not book.selectedEntity then
+        return
     end
+    if book.kind == "mount" and book.selectedEntity.isCollected == false then
+        return
+    end
+
+    if fileID == "noMusic" then
+        book.previewTrackName = nil
+        book.previewTrackFileID = nil
+    else
+        book.previewTrackName = songName
+        book.previewTrackFileID = fileID
+    end
+    local selections = book.kind == "mount" and selectedMountMusicDraft or selectedDruidFormMusicDraft
+    selections[book.selectedEntity.id] = { [songName] = fileID }
+    MountMusicDB.pendingMountMusicDraft = copyMusicSelections(selectedMountMusicDraft)
+    MountMusicDB.pendingDruidFormMusicDraft = copyMusicSelections(selectedDruidFormMusicDraft)
+    persistDraftMusicSelections()
+    saveButton:SetText("Save")
+    saveButton:SetEnabled(true)
+    refreshBookSelection(book)
 end
 
-UIDropDownMenu_Initialize(musicLibraryDropdown, function(_, level, menuList)
-    if level == 1 then
-        local rootItems = {
-            { text = "City Music", menuList = "cityMusic" },
-            { text = "Expansion Themes", menuList = "expansionThemes" },
-            { text = "Musical Moments", menuList = "musicMoments" },
-            { text = "No Music", value = "noMusic" },
-            { text = "Raids", menuList = "raids" },
-            { text = "Zone Music", menuList = "zoneMusic" },
-        }
-        for _, item in ipairs(rootItems) do
-            local info = UIDropDownMenu_CreateInfo()
-            info.text = item.text
-            info.value = item.value
-            info.menuList = item.menuList
-            info.hasArrow = item.menuList and true or nil
-            info.checked = item.value == "noMusic" and not currentMusicFileID or false
-            info.fontObject = GameFontNormal
-            if item.value == "noMusic" then
-                info.func = function()
-                    MountMusicDB.playerLibraryTrackFileID = "noMusic"
-                    manualPlaybackOverride = true
-                    manualPlaybackTargetKey = getActiveMusicTarget()
-                    stopCurrentMusic(true)
-                    UIDropDownMenu_SetSelectedValue(musicLibraryDropdown, "noMusic")
-                    UIDropDownMenu_SetText(musicLibraryDropdown, "No Music")
+local function createAssignmentBook(page, kind, pageTitle)
+    local book = {
+        kind = kind,
+        pageTitle = pageTitle,
+        entityRows = {},
+        accordionRows = {},
+        openCategory = nil,
+        openSubcategory = nil,
+    }
+
+    book.leftPage = CreateFrame("Frame", nil, page, "ToolTipBorderedFrameTemplate")
+    book.leftPage:SetPoint("TOPLEFT", page, "TOPLEFT", 5, -5)
+    book.leftPage:SetPoint("BOTTOMRIGHT", page, "BOTTOMLEFT", 270, 5)
+
+    book.rightPage = CreateFrame("Frame", nil, page, "ToolTipBorderedFrameTemplate")
+    book.rightPage:SetPoint("TOPLEFT", page, "TOPLEFT", 276, -5)
+    book.rightPage:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -5, 5)
+
+    book.pageHeading = book.leftPage:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    book.pageHeading:SetPoint("TOPLEFT", 10, -8)
+    book.pageHeading:SetText(pageTitle)
+    book.pageHeading:SetTextColor(1, 0.82, 0)
+
+    book.listScroll = CreateFrame("ScrollFrame", nil, book.leftPage, "ScrollFrameTemplate")
+    book.listScroll:SetPoint("TOPLEFT", book.leftPage, "TOPLEFT", 8, -26)
+    book.listScroll:SetPoint("BOTTOMRIGHT", book.leftPage, "BOTTOMRIGHT", -24, 16)
+    book.listScroll:EnableMouseWheel(true)
+    book.listContent = CreateFrame("Frame", nil, book.listScroll)
+    book.listContent:SetWidth(220)
+    book.listScroll:SetScrollChild(book.listContent)
+
+    book.emptyText = book.listContent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    book.emptyText:SetPoint("TOPLEFT", 8, -8)
+    book.emptyText:SetWidth(180)
+    book.emptyText:SetJustifyH("LEFT")
+
+    book.entityTitle = book.rightPage:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    book.entityTitle:SetPoint("TOPLEFT", book.rightPage, "TOPLEFT", 10, -8)
+    book.entityTitle:SetWidth(math.max(320, book.rightPage:GetWidth() - 20))
+    book.entityTitle:SetJustifyH("LEFT")
+    book.entityTitle:SetTextColor(1, 0.82, 0)
+
+    book.assignmentText = book.rightPage:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    book.assignmentText:SetPoint("TOPLEFT", book.entityTitle, "BOTTOMLEFT", 0, -3)
+    book.assignmentText:SetWidth(math.max(320, book.rightPage:GetWidth() - 20))
+    book.assignmentText:SetJustifyH("LEFT")
+
+    book.randomButton = CreateFrame("Button", nil, book.rightPage, "UIPanelButtonTemplate")
+    book.randomButton:SetSize(112, 22)
+    book.randomButton:SetPoint("TOPLEFT", book.assignmentText, "BOTTOMLEFT", 0, -6)
+    book.randomButton:SetText("Assign Random")
+    book.randomButton:SetScript("OnClick", function()
+        local track = getRandomMusicTrack()
+        if not track then
+            print("MountMusic: No music tracks are available.")
+            return
+        end
+        assignBookTrack(book, track.name, track.fileID)
+    end)
+
+    book.noMusicButton = CreateFrame("Button", nil, book.rightPage, "UIPanelButtonTemplate")
+    book.noMusicButton:SetSize(90, 22)
+    book.noMusicButton:SetPoint("LEFT", book.randomButton, "RIGHT", 6, 0)
+    book.noMusicButton:SetText("No Music")
+    book.noMusicButton:SetScript("OnClick", function()
+        assignBookTrack(book, "No Music", "noMusic")
+    end)
+
+    book.playNowButton = CreateFrame("Button", nil, book.rightPage, "UIPanelButtonTemplate")
+    book.playNowButton:SetSize(90, 22)
+    book.playNowButton:SetPoint("LEFT", book.noMusicButton, "RIGHT", 6, 0)
+    book.playNowButton:SetText("Play Now")
+    book.playNowButton:SetEnabled(false)
+    book.playNowButton:SetScript("OnClick", function()
+        local fileID = book.previewTrackFileID
+        if not fileID then
+            return
+        end
+
+        manualPlaySequence = manualPlaySequence + 1
+        if startMusicTrack(
+            fileID,
+            "manual:assignment:" .. manualPlaySequence,
+            book.previewTrackName
+        ) then
+            manualPlaybackOverride = true
+            manualPlaybackTargetKey = getActiveMusicTarget()
+        end
+    end)
+
+    book.accordionScroll = CreateFrame("ScrollFrame", nil, book.rightPage, "ScrollFrameTemplate")
+    book.accordionScroll:SetPoint("TOPLEFT", book.randomButton, "BOTTOMLEFT", 0, -8)
+    book.accordionScroll:SetPoint("BOTTOMRIGHT", book.rightPage, "BOTTOMRIGHT", -26, 8)
+    book.accordionScroll:EnableMouseWheel(true)
+    book.accordionContent = CreateFrame("Frame", nil, book.accordionScroll)
+    book.accordionContent:SetWidth(math.max(305, book.rightPage:GetWidth() - 60))
+    book.accordionScroll:SetScrollChild(book.accordionContent)
+
+    function book.setEntities(entities, savedEntityID)
+        local rowHeight = 52
+        local iconSize = 40
+        local rowSpacing = 4
+        local textOffset = iconSize + 12
+        local textWidth = book.listContent:GetWidth() - textOffset - 8
+        local selectedEntity
+        for _, entity in ipairs(entities) do
+            if entity.id == savedEntityID then
+                selectedEntity = entity
+                break
+            end
+        end
+        book.selectedEntity = selectedEntity or entities[1]
+        local assignedName, assignedFileID = getBookSelection(book)
+        if assignedFileID and assignedFileID ~= "noMusic" then
+            book.previewTrackName = assignedName
+            book.previewTrackFileID = assignedFileID
+        else
+            book.previewTrackName = nil
+            book.previewTrackFileID = nil
+        end
+
+        for index, entity in ipairs(entities) do
+            local row = book.entityRows[index]
+            if not row then
+                row = CreateFrame("Button", nil, book.listContent)
+                row:SetHeight(rowHeight)
+                setCollectionHover(row)
+                row.border = CreateFrame("Frame", nil, row, "BackdropTemplate")
+                row.border:SetAllPoints(row)
+                row.border:SetFrameLevel(row:GetFrameLevel() + 3)
+                row.border:EnableMouse(false)
+                row.border:SetBackdrop({
+                    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+                    edgeSize = 8,
+                    insets = { left = 2, right = 2, top = 2, bottom = 2 },
+                })
+                row.border:SetBackdropBorderColor(0.65, 0.5, 0.25, 0.55)
+                row.selectionTexture = row:CreateTexture(nil, "BACKGROUND")
+                row.selectionTexture:SetPoint("TOPLEFT", row, "TOPLEFT", 3, -3)
+                row.selectionTexture:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", -3, 3)
+                row.selectionTexture:SetTexture("Interface\\Buttons\\WHITE8X8")
+                row.selectionTexture:SetVertexColor(0.6, 0.42, 0.12, 0.28)
+                row.icon = row:CreateTexture(nil, "ARTWORK")
+                row.icon:SetSize(iconSize, iconSize)
+                row.icon:SetPoint("LEFT", 4, 0)
+                row.nameText = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                row.nameText:SetPoint("TOPLEFT", row, "TOPLEFT", textOffset, -13)
+                row.nameText:SetWidth(textWidth)
+                row.nameText:SetWordWrap(false)
+                row.nameText:SetJustifyH("CENTER")
+                row.assignmentText = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+                row.assignmentText:SetPoint("TOPLEFT", row.nameText, "BOTTOMLEFT", 0, -1)
+                row.assignmentText:SetWidth(textWidth)
+                row.assignmentText:SetWordWrap(false)
+                row.assignmentText:SetJustifyH("CENTER")
+                row.assignmentText:SetTextColor(0.75, 0.72, 0.62)
+                book.entityRows[index] = row
+            end
+
+            local currentEntity = entity
+            row.entity = entity
+            row:ClearAllPoints()
+            row:SetPoint("TOPLEFT", book.listContent, "TOPLEFT", 4, -(8 + (index - 1) * (rowHeight + rowSpacing)))
+            row:SetWidth(book.listContent:GetWidth() - 8)
+            row.icon:SetTexture(entity.icon)
+            row.nameText:SetText(entity.name)
+            local isLockedMount = book.kind == "mount" and entity.isCollected == false
+            row.icon:SetDesaturated(isLockedMount)
+            if isLockedMount then
+                row.icon:SetVertexColor(0.5, 0.5, 0.5)
+                row.nameText:SetTextColor(0.55, 0.55, 0.55)
+            else
+                row.icon:SetVertexColor(1, 1, 1)
+                row.nameText:SetTextColor(1, 0.82, 0)
+            end
+            row.selectionTexture:SetShown(book.selectedEntity.id == entity.id)
+            row:SetScript("OnClick", function()
+                book.selectedEntity = currentEntity
+                if book.kind == "mount" then
+                    MountMusicDB.selectedMountAssignmentID = currentEntity.id
+                else
+                    MountMusicDB.selectedDruidFormAssignmentName = currentEntity.id
+                end
+                local assignedName, assignedFileID = getBookSelection(book)
+                if assignedFileID and assignedFileID ~= "noMusic" then
+                    book.previewTrackName = assignedName
+                    book.previewTrackFileID = assignedFileID
+                else
+                    book.previewTrackName = nil
+                    book.previewTrackFileID = nil
+                end
+                refreshBookSelection(book)
+            end)
+            row:Show()
+        end
+
+        for index = #entities + 1, #book.entityRows do
+            book.entityRows[index].entity = nil
+            book.entityRows[index]:Hide()
+        end
+
+        book.emptyText:SetText(#entities == 0 and "No entries available" or "")
+        book.listContent:SetHeight(math.max(
+            book.listScroll:GetHeight(),
+            (#entities * (rowHeight + rowSpacing)) + 16
+        ))
+        book.listScroll:UpdateScrollChildRect()
+        book.listScroll:SetVerticalScroll(0)
+        refreshBookSelection(book)
+    end
+
+    local function getAccordionRow(index)
+        local row = book.accordionRows[index]
+        if row then
+            return row
+        end
+
+        row = CreateFrame("Button", nil, book.accordionContent)
+        setCollectionHover(row)
+        row.selectionTexture = row:CreateTexture(nil, "BACKGROUND")
+        row.selectionTexture:SetAllPoints()
+        row.selectionTexture:SetTexture("Interface\\Buttons\\WHITE8X8")
+        row.selectionTexture:SetVertexColor(0.55, 0.38, 0.1, 0.3)
+        row.label = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        row.label:SetJustifyH("LEFT")
+        book.accordionRows[index] = row
+        return row
+    end
+
+    local function renderAccordion()
+        local scrollPosition = book.accordionScroll:GetVerticalScroll()
+        local rowIndex = 0
+        local yPos = 6
+        local canAssign = book.selectedEntity ~= nil
+            and (book.kind ~= "mount" or book.selectedEntity.isCollected ~= false)
+        local selectedSongName, selectedFileID = getBookSelection(book)
+
+        local function addRow(text, indent, height, selected, onClick, color)
+            rowIndex = rowIndex + 1
+            local row = getAccordionRow(rowIndex)
+            row:ClearAllPoints()
+            row:SetPoint("TOPLEFT", book.accordionContent, "TOPLEFT", 4, -yPos)
+            row:SetSize(book.accordionContent:GetWidth() - 8, height)
+            row.label:ClearAllPoints()
+            row.label:SetPoint("LEFT", row, "LEFT", 8 + indent, 0)
+            row.label:SetWidth(row:GetWidth() - 14 - indent)
+            row.label:SetText(text)
+            local idleColor = selected and { 1, 0.9, 0.45 } or color
+            row.label:SetTextColor(idleColor[1], idleColor[2], idleColor[3])
+            row:SetScript("OnEnter", function(self)
+                self.label:SetTextColor(1, 1, 1)
+            end)
+            row:SetScript("OnLeave", function(self)
+                self.label:SetTextColor(idleColor[1], idleColor[2], idleColor[3])
+            end)
+            row.selectionTexture:SetShown(selected == true)
+            row:SetScript("OnClick", onClick)
+            row:SetEnabled(onClick ~= nil)
+            row:Show()
+            yPos = yPos + height
+        end
+
+        local function addTracks(menuList, indent)
+            local musicTable = playerMusicTablesByMenuList[menuList]
+            if not musicTable then
+                return
+            end
+            for trackName, fileID in sortedMusicPairs(musicTable) do
+                local name, trackID = trackName, fileID
+                local isAssigned = selectedSongName == name and selectedFileID == trackID
+                local isPreview = book.previewTrackName == name and book.previewTrackFileID == trackID
+                addRow(name, indent, 24, isAssigned or isPreview, function()
+                    book.previewTrackName = name
+                    book.previewTrackFileID = trackID
+                    if canAssign then
+                        assignBookTrack(book, name, trackID)
+                    else
+                        refreshBookSelection(book)
+                    end
+                end, { 0.92, 0.9, 0.82 })
+            end
+        end
+
+        for _, category in ipairs(assignmentAccordionRoots) do
+            local root = category
+            local isOpen = book.openCategory == root.menuList
+            addRow((isOpen and "v  " or ">  ") .. root.text, 0, 25, false, function()
+                if isOpen then
+                    book.openCategory = nil
+                else
+                    book.openCategory = root.menuList
+                end
+                book.openSubcategory = nil
+                renderAccordion()
+            end, { 1, 0.82, 0 })
+
+            if isOpen then
+                if root.children then
+                    for _, subcategory in ipairs(root.children) do
+                        local sub = subcategory
+                        local subOpen = book.openSubcategory == sub.menuList
+                        addRow((subOpen and "v  " or ">  ") .. sub.text, 10, 23, false, function()
+                            if subOpen then
+                                book.openSubcategory = nil
+                            else
+                                book.openSubcategory = sub.menuList
+                            end
+                            renderAccordion()
+                        end, { 0.92, 0.78, 0.38 })
+                        if subOpen then
+                            addTracks(sub.menuList, 24)
+                        end
+                    end
+                else
+                    addTracks(root.menuList, 12)
                 end
             end
-            UIDropDownMenu_AddButton(info, level)
+            yPos = yPos + 3
         end
-        return
-    end
 
-    local categories = playerMenuCategories[menuList]
-    if categories then
-        for _, category in ipairs(categories) do
-            local info = UIDropDownMenu_CreateInfo()
-            info.text = category.text
-            info.menuList = category.menuList
-            info.hasArrow = true
-            info.fontObject = GameFontNormal
-            UIDropDownMenu_AddButton(info, level)
+        for index = rowIndex + 1, #book.accordionRows do
+            book.accordionRows[index]:Hide()
         end
-        return
+        book.accordionContent:SetHeight(math.max(book.accordionScroll:GetHeight(), yPos + 6))
+        book.accordionScroll:UpdateScrollChildRect()
+        book.accordionScroll:SetVerticalScroll(scrollPosition)
     end
 
-    local musicTable = playerMusicTablesByMenuList[menuList]
-    if musicTable then
-        addPlayerDropdownTracks(musicTable, level)
-    end
-end)
+    book.renderAccordion = renderAccordion
+    book.setEntities({}, nil)
+    return book
+end
 
-local savedPlayerLibraryTrack = musicTrackByFileID[MountMusicDB.playerLibraryTrackFileID]
-if MountMusicDB.playerLibraryTrackFileID == "noMusic" then
-    UIDropDownMenu_SetSelectedValue(musicLibraryDropdown, "noMusic")
-    UIDropDownMenu_SetText(musicLibraryDropdown, "No Music")
-elseif savedPlayerLibraryTrack then
-    UIDropDownMenu_SetSelectedValue(musicLibraryDropdown, savedPlayerLibraryTrack.fileID)
-    UIDropDownMenu_SetText(musicLibraryDropdown, savedPlayerLibraryTrack.name)
+buildAssignmentPages = function()
+    if not mountBook then
+        mountBook = createAssignmentBook(mountScrollChild, "mount", "Mounts")
+        druidBook = createAssignmentBook(druidScrollChild, "druid", "Druid Forms")
+    end
+
+    local mountEntities = {}
+    for _, mountData in ipairs(mountEntries) do
+        if mountData.spellID then
+            table.insert(mountEntities, {
+                id = mountData.spellID,
+                name = mountData.name,
+                icon = mountData.icon,
+                isCollected = mountData.isCollected,
+            })
+        end
+    end
+    mountBook.setEntities(mountEntities, MountMusicDB.selectedMountAssignmentID)
+
+    local _, classToken = UnitClass("player")
+    local formEntities = {}
+    if classToken == "DRUID" then
+        for _, form in ipairs(druidFormDefinitions) do
+            table.insert(formEntities, {
+                id = form.name,
+                name = form.name,
+                icon = getDruidFormIcon(form),
+            })
+        end
+    end
+    druidBook.setEntities(formEntities, MountMusicDB.selectedDruidFormAssignmentName)
+    refreshMusicPlayer()
 end
 
 local function restoreMusicAfterFormChange()
@@ -1907,40 +1751,6 @@ toggleAutoPlay = function()
         manualPlaybackTargetKey = nil
     end
     updateMusicPlayback()
-end
-
-playPreviousMusic = function()
-    if #allMusicTracks == 0 then
-        print("MountMusic: No music tracks are available.")
-        return
-    end
-
-    local track
-    if playbackHistoryPosition > 1 then
-        playbackHistoryPosition = playbackHistoryPosition - 1
-        track = musicTrackByFileID[playbackHistory[playbackHistoryPosition]]
-        navigatingPlaybackHistory = true
-    else
-        local currentIndex = musicTrackIndexByFileID[currentMusicFileID]
-        if not currentIndex then
-            print("MountMusic: No previous song is available.")
-            return
-        end
-        local previousIndex = ((currentIndex - 2) % #allMusicTracks) + 1
-        track = allMusicTracks[previousIndex]
-    end
-
-    manualPlaySequence = manualPlaySequence + 1
-    local started = startMusicTrack(track.fileID, "manual:previous:" .. manualPlaySequence, track.name)
-    navigatingPlaybackHistory = false
-    if started then
-        manualPlaybackOverride = true
-        manualPlaybackTargetKey = getActiveMusicTarget()
-    end
-end
-
-skipMusic = function()
-    playRandomMusic()
 end
 
 updateMusicPlayback = function()

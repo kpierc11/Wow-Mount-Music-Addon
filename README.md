@@ -16,5 +16,8 @@ Add your audio files here. (MP3 or OGG files only)
 
 3. Please reload the ui or restart the game. 
 
+## Retail music IDs (temporarily disabled)
+
+The Retail FileDataID table is commented out in `SongList.lua` for now. The active named music tables are in `MountMusic.lua`.
 
 
