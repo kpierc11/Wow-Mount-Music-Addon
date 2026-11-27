@@ -3,7 +3,7 @@
 ## Notes: Mount Music addon
 ## Author: Kaleb Pierce
 ## Version: 1.0.0
-## SavedVariables: selectedMountMusicValues, MountMusicDB
+## SavedVariables: selectedMountMusicValues, selectedDruidFormMusicValues, MountMusicDB
 
 ## OptionalDeps: LibStub, CallbackHandler-1.0, LibDataBroker-1.1, LibDBIcon-1.0
 

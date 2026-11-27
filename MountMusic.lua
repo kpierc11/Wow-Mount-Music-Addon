@@ -9,14 +9,15 @@ local mountUiYPos             = 230;
 local numMounts               = GetNumCompanions("MOUNT")
 
 --Create Mount Music ui components for the options panel
-local function createMountUiElements(id, yPos)
+local function createMountUiElements(id, yPos, formName, formIcon, mountData)
     local width = 45
     local height = 45
     local x = 10
     local creatureName, creatureID, icon, active, isUsable, sourceType, isFavorite, isFactionSpecific, faction, hideOnChar, isCollected =
         C_MountJournal.GetDisplayedMountInfo(id)
 
-    local frame = CreateFrame("Frame", nil, mountMusicSettingsFrame, "ToolTipBorderedFrameTemplate")
+    local frame = CreateFrame("Frame", "mountMusicUiElement" .. id, scrollChild,
+        "ToolTipBorderedFrameTemplate")
     frame:SetPoint("CENTER", x, yPos)
     frame:SetWidth(600 - 80)
     frame:SetHeight(70)
@@ -25,9 +26,20 @@ local function createMountUiElements(id, yPos)
 
     mountIconButton:SetSize(width, height)
     mountIconButton:SetPoint("LEFT", 20, 0)
-    mountIconButton:SetScript("OnClick", function()
-        CastSpellByName(creatureName)
-    end)
+    if not formName then
+        if not mountData or mountData.isCollected then
+            mountIconButton:SetScript("OnClick", function()
+                CastSpellByName(creatureName)
+            end)
+        else
+            mountIconButton:SetScript("OnEnter", function(self)
+                GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                GameTooltip:AddLine("Mount not acquired yet", 1, 0.82, 0)
+                GameTooltip:Show()
+            end)
+            mountIconButton:SetScript("OnLeave", GameTooltip_Hide)
+        end
+    end
 
     mountIconButton.Texture = frame:CreateTexture("mount music top icon",
         "ARTWORK")
@@ -35,6 +47,10 @@ local function createMountUiElements(id, yPos)
     mountIconButton.Texture:SetHeight(height)
     mountIconButton.Texture:SetPoint("LEFT", 20, 0)
     mountIconButton.Texture:SetTexture(icon)
+    if mountData and not mountData.isCollected then
+        mountIconButton.Texture:SetDesaturated(true)
+        mountIconButton.Texture:SetVertexColor(0.45, 0.45, 0.45)
+    end
 
     frame.Text = frame:CreateFontString(nil, "OVERLAY", "GameTooltipText")
     frame.Text:SetPoint("LEFT", 75, 0)
@@ -42,25 +58,31 @@ local function createMountUiElements(id, yPos)
     frame.Text:SetWordWrap(true)
     frame.Text:SetJustifyH("LEFT")
     frame.Text:SetText(creatureName)
+    if mountData and not mountData.isCollected then
+        frame.Text:SetTextColor(0.55, 0.55, 0.55)
+    end
 
 
-    local dropDown = CreateFrame("Frame", "mountMusicUiDropdown" .. id, frame,
+    local dropDown = CreateFrame("Frame", "mountMusicUiDropdown" .. nextUiRowId, frame,
         "UIDropDownMenuTemplate")
     dropDown:SetPoint("RIGHT", 0, 0)
     dropDown:SetWidth(200)
     UIDropDownMenu_SetWidth(dropDown, 200)
 
     -- Set visible label font
-    local textRegion = _G["mountMusicUiDropdown" .. id .. "Text"]
+    local textRegion = _G["mountMusicUiDropdown" .. nextUiRowId .. "Text"]
     if textRegion then
         textRegion:SetFont("Fonts\\FRIZQT__.TTF", 14)
     end
 
-    if selectedMountMusicValues and selectedMountMusicValues[creatureID] then
-        local selectedSongName, selectedSongFileId = next(selectedMountMusicValues[creatureID])
+    if musicValues and musicValues[creatureID] then
+        local selectedSongName, selectedSongFileId = next(musicValues[creatureID])
         UIDropDownMenu_SetText(dropDown, selectedSongName)
     else
         UIDropDownMenu_SetText(dropDown, "Select a song")
+    end
+    if mountData and not mountData.isCollected then
+        UIDropDownMenu_DisableDropDown(dropDown)
     end
 
 
@@ -69,7 +91,10 @@ local function createMountUiElements(id, yPos)
         local selectedValue = self.value
         UIDropDownMenu_SetSelectedValue(dropDown, selectedValue)
         UIDropDownMenu_SetText(dropDown, selectedText)
-        selectedMountMusicValues[creatureID] = { [selectedText] = selectedValue }
+        musicValues[creatureID] = { [selectedText] = selectedValue }
+        if formName and druidFormSaveButton then
+            druidFormSaveButton:SetText("Save")
+        end
     end
 
 
@@ -77,8 +102,8 @@ local function createMountUiElements(id, yPos)
         local info = UIDropDownMenu_CreateInfo()
         local selectedSongName, selectedSongFileId = {}
 
-        if selectedMountMusicValues[creatureID] then
-            selectedSongName, selectedSongFileId = next(selectedMountMusicValues[creatureID])
+        if musicValues[creatureID] then
+            selectedSongName, selectedSongFileId = next(musicValues[creatureID])
         end
 
         -- Top Level --
@@ -391,35 +416,182 @@ local function createMountUiElements(id, yPos)
             end
         end
     end)
+
+    return frame
 end
 
 
 
+local druidFormDefinitions = {
+    { name = "Bear Form", spellID = 5487, fallbackIcon = "Interface\\Icons\\Ability_Racial_BearForm" },
+    { name = "Dire Bear Form", spellID = 9634, fallbackIcon = "Interface\\Icons\\Ability_Racial_BearForm" },
+    { name = "Cat Form", spellID = 768, fallbackIcon = "Interface\\Icons\\Ability_Druid_CatForm" },
+    { name = "Travel Form", spellID = 783, fallbackIcon = "Interface\\Icons\\Ability_Druid_TravelForm" },
+    { name = "Aquatic Form", spellID = 1066, fallbackIcon = "Interface\\Icons\\Ability_Druid_AquaticForm" },
+    { name = "Moonkin Form", spellID = 24858, fallbackIcon = "Interface\\Icons\\Spell_Nature_ForceOfNature" },
+}
+
+local druidFormNamesBySpellID = {}
+for _, form in ipairs(druidFormDefinitions) do
+    druidFormNamesBySpellID[form.spellID] = form.name
+end
+
+local playDruidFormMusic
+
+local function getMountJournalEntries()
+    local entries = {}
+    if C_MountJournal and C_MountJournal.GetMountIDs and C_MountJournal.GetMountInfoByID then
+        for _, mountID in ipairs(C_MountJournal.GetMountIDs() or {}) do
+            local name, spellID, icon, _, _, _, _, _, _, hideOnChar, isCollected =
+                C_MountJournal.GetMountInfoByID(mountID)
+            if name and not hideOnChar then
+                table.insert(entries, {
+                    mountID = mountID,
+                    name = name,
+                    spellID = spellID,
+                    icon = icon,
+                    isCollected = isCollected,
+                })
+            end
+        end
+    else
+        for mountIndex = 1, numMounts do
+            local name, spellID, icon = C_MountJournal.GetDisplayedMountInfo(mountIndex)
+            if name then
+                table.insert(entries, {
+                    mountID = spellID,
+                    name = name,
+                    spellID = spellID,
+                    icon = icon,
+                    isCollected = true,
+                })
+            end
+        end
+    end
+    table.sort(entries, function(left, right)
+        return left.name < right.name
+    end)
+    return entries
+end
+
+local function getDruidFormIcon(form)
+    if C_Spell and C_Spell.GetSpellTexture then
+        return C_Spell.GetSpellTexture(form.spellID) or form.fallbackIcon
+    end
+    if GetSpellTexture then
+        return GetSpellTexture(form.spellID) or form.fallbackIcon
+    end
+    if GetSpellInfo then
+        local _, _, icon = GetSpellInfo(form.spellID)
+        return icon or form.fallbackIcon
+    end
+    return form.fallbackIcon
+end
+
+local function createDruidFormUiElements(yPos)
+    local _, classToken = UnitClass("player")
+    if classToken ~= "DRUID" then
+        return yPos
+    end
+
+    local heading = CreateFrame("Frame", nil, scrollChild)
+    table.insert(settingsContentFrames, heading)
+    heading:SetSize(400, 40)
+    heading:SetPoint("TOP", 0, -yPos)
+    heading.text = heading:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+    heading.text:SetPoint("CENTER")
+    heading.text:SetText("Druid Forms")
+
+    yPos = yPos + 50
+    for formIndex, form in ipairs(druidFormDefinitions) do
+        createMountUiElements("form" .. formIndex, yPos, form.name, getDruidFormIcon(form))
+        yPos = yPos + 90
+    end
+
+    return yPos + 20
+end
+
+local function buildSettingsRows()
+    for _, frame in ipairs(settingsContentFrames) do
+        frame:Hide()
+    end
+    wipe(settingsContentFrames)
+
+    mountEntries = getMountJournalEntries()
+    local yPos = mountUiYPos
+    for _, mountData in ipairs(mountEntries) do
+        createMountUiElements(mountData.mountID, yPos, nil, nil, mountData)
+        yPos = yPos + 90
+    end
+    yPos = createDruidFormUiElements(yPos)
+
+    scrollChild:SetHeight(math.max(mmFrameHeight / 3, yPos + 24))
+end
+
+
 -- Play music when mounted --
+local currentlyPlayingDruidFormMusic = false
+local currentlyPlayingDruidFormKey
+local currentlyPlayingDruidSongFileId
+local formMusicFadePending = false
+local formMusicFadeToken = 0
+
+local function cancelFormMusicFade()
+    formMusicFadeToken = formMusicFadeToken + 1
+    formMusicFadePending = false
+end
+
+local function clearDruidFormMusicState()
+    currentlyPlayingDruidFormMusic = false
+    currentlyPlayingDruidFormKey = nil
+    currentlyPlayingDruidSongFileId = nil
+end
+
 local function playMountMusic()
     if IsMounted() and alreadyMounted == false then
-        for i = 1, numMounts do
-            local creatureName, creatureID, icon, isSummoned, isUsable, sourceType, isFavorite, isFactionSpecific, faction, hideOnChar, isCollected =
-                C_MountJournal.GetDisplayedMountInfo(i)
-
-            if isSummoned then
+        cancelFormMusicFade()
+        if currentlyPlayingDruidFormMusic then
+            StopMusic()
+            clearDruidFormMusicState()
+        end
+        local function startAssignedMountMusic(creatureID)
+            if selectedMountMusicValues[creatureID] then
                 SetCVar("Sound_MusicVolume", 0.5)
                 SetCVar("Sound_AmbienceVolume", 0.1)
                 SetCVar("Sound_SFXVolume", 0.3)
-                if selectedMountMusicValues[creatureID] ~= nil then
-                    local _, selectedSongFileId = next(selectedMountMusicValues[creatureID])
-                    if (_ == "secret song") then
-                        PlayMusic("Interface/AddOns/MountMusic/audio-files/secret-song.mp3")
-                        alreadyMounted = true
-                    elseif selectedSongFileId then
-                        PlayMusic(selectedSongFileId)
-                        alreadyMounted = true
-                    end
+                local songName, selectedSongFileId = next(selectedMountMusicValues[creatureID])
+                if songName == "secret song" then
+                    StopMusic()
+                    PlayMusic("Interface/AddOns/MountMusic/audio-files/secret-song.mp3")
+                    alreadyMounted = true
+                elseif selectedSongFileId then
+                    StopMusic()
+                    PlayMusic(selectedSongFileId)
+                    alreadyMounted = true
                 end
             end
         end
-    elseif IsMounted() == false then
-        StopMusic()
+
+        if C_MountJournal and C_MountJournal.GetMountInfoByID then
+            for _, mountData in ipairs(mountEntries) do
+                local _, creatureID, _, isActive = C_MountJournal.GetMountInfoByID(mountData.mountID)
+                if isActive then
+                    startAssignedMountMusic(creatureID)
+                    break
+                end
+            end
+        else
+            for i = 1, numMounts do
+                local _, creatureID, _, isSummoned = C_MountJournal.GetDisplayedMountInfo(i)
+                if isSummoned then
+                    startAssignedMountMusic(creatureID)
+                end
+            end
+        end
+    elseif IsMounted() == false and alreadyMounted then
+        if not currentlyPlayingDruidFormMusic then
+            StopMusic()
+        end
         alreadyMounted = false
     end
 end
@@ -427,39 +599,39 @@ end
 
 --NumMounts always seems to be zero on player login.
 --If it is not zero create the mount ui elements else create a button that will generate the mount music ui.
--- if (numMounts ~= 0 and selectedMountMusicValues ~= nil) then
---     for i = 1, numMounts do
---         createMountUiElements(i, mountUiYPos)
---         mountUiYPos = mountUiYPos - 90
---     end
--- else
---     local heading = CreateFrame("Frame", nil, mountMusicSettingsFrame)
---     heading:SetSize(400, 60) -- Set a reasonable size for the heading
---     heading:SetPoint("CENTER", 0, 0)
+if (numMounts ~= 0 and selectedMountMusicValues ~= nil) then
+    for i = 1, numMounts do
+        createMountUiElements(i, mountUiYPos)
+        mountUiYPos = mountUiYPos - 90
+    end
+else
+    local heading = CreateFrame("Frame", nil, mountMusicSettingsFrame)
+    heading:SetSize(400, 60) -- Set a reasonable size for the heading
+    heading:SetPoint("CENTER", 0, 0)
 
---     heading.text = heading:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
---     heading.text:SetPoint("CENTER", 0, 0)
---     heading.text:SetWidth(400)
---     heading.text:SetJustifyH("CENTER")
---     heading.text:SetJustifyV("TOP")
---     heading.text:SetWordWrap(true)
---     heading.text:SetText("Click generate mount data and then select songs you want played when riding specific mounts.")
+    heading.text = heading:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+    heading.text:SetPoint("CENTER", 0, 0)
+    heading.text:SetWidth(400)
+    heading.text:SetJustifyH("CENTER")
+    heading.text:SetJustifyV("TOP")
+    heading.text:SetWordWrap(true)
+    heading.text:SetText("Click generate mount data and then select songs you want played when riding specific mounts.")
 
---     local f = CreateFrame("Button", nil, mountMusicSettingsFrame, "UIPanelButtonTemplate")
---     f:SetSize(180, 30)
---     f:SetPoint("CENTER", 0, -50)
---     f:SetText("Generate Mount Data")
---     f:SetScript("OnClick", function()
---         local firstLoadNumMounts = GetNumCompanions("Mount")
---         numMounts = firstLoadNumMounts
---         for i = 1, firstLoadNumMounts do
---             createMountUiElements(i, mountUiYPos)
---             mountUiYPos = mountUiYPos - 90
---         end
---         heading:Hide()
---         f:Hide()
---     end)
--- end
+    local f = CreateFrame("Button", nil, mountMusicSettingsFrame, "UIPanelButtonTemplate")
+    f:SetSize(180, 30)
+    f:SetPoint("CENTER", 0, -50)
+    f:SetText("Generate Mount Data")
+    f:SetScript("OnClick", function()
+        local firstLoadNumMounts = GetNumCompanions("Mount")
+        numMounts = firstLoadNumMounts
+        for i = 1, firstLoadNumMounts do
+            createMountUiElements(i, mountUiYPos)
+            mountUiYPos = mountUiYPos - 90
+        end
+        heading:Hide()
+        f:Hide()
+    end)
+end
 
 local function showMountUI()
     for i = 1, numMounts do
@@ -479,6 +651,9 @@ local function onEvent(self, event, ...)
             if selectedMountMusicValues == nil then
                 _G.selectedMountMusicValues = {}
             end
+            if selectedDruidFormMusicValues == nil then
+                _G.selectedDruidFormMusicValues = {}
+            end
         end
         for i = 1, numMounts do
             createMountUiElements(i, mountUiYPos)
@@ -489,11 +664,22 @@ local function onEvent(self, event, ...)
         local unitID = ...
         if (unitID == "player") then
             playMountMusic()
+            playDruidFormMusic()
         end
+    end
+    if event == "UPDATE_SHAPESHIFT_FORM" or event == "PLAYER_ENTERING_WORLD" then
+        playDruidFormMusic()
+    end
+    if event == "PLAYER_STARTED_SWIMMING" or event == "PLAYER_STOPPED_SWIMMING" then
+        playDruidFormMusic()
     end
 end
 
 --Register events and scripts --
 mountMusicSettingsFrame:RegisterEvent("ADDON_LOADED")
+mountMusicSettingsFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+mountMusicSettingsFrame:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
+mountMusicSettingsFrame:RegisterEvent("PLAYER_STARTED_SWIMMING")
+mountMusicSettingsFrame:RegisterEvent("PLAYER_STOPPED_SWIMMING")
 mountMusicSettingsFrame:RegisterUnitEvent("UNIT_AURA", "player")
 mountMusicSettingsFrame:SetScript("OnEvent", onEvent)
