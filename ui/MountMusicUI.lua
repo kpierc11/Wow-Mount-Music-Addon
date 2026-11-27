@@ -124,7 +124,7 @@ local data = {}
 for mountID, value in pairs(mountIDs) do
     local creatureName, spellID, icon, _, _, _, _, _, _, shouldHideOnChar, isCollected = C_MountJournal.GetMountInfoByID(
         mountID)
-    if creatureName and not shouldHideOnChar and isCollected then
+    if creatureName and not shouldHideOnChar then
         table.insert(data, {
             MountID = mountID,
             MountName = creatureName,
@@ -215,8 +215,6 @@ end)
 
 section.header = header
 section.body = body
-
-
 
 
 -- Load LibDBIcon
