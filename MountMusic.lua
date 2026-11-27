@@ -1,6 +1,6 @@
 -- Initial options frame
 local mountMusicSettingsFrame = CreateFrame("Frame", nil, UIParent, "SettingsFrameTemplate")
-local mmFrameWidth            = 600
+local mmFrameWidth            = 800
 local mmFrameHeight           = 600
 
 --Set Title of the Mount Music setting frame
@@ -13,7 +13,7 @@ title:SetFont(file, 14, flags)
 
 
 mountMusicSettingsFrame:SetPoint("CENTER")
-mountMusicSettingsFrame:SetSize(mmFrameHeight, mmFrameWidth)
+mountMusicSettingsFrame:SetSize(mmFrameWidth, mmFrameHeight)
 
 -- Make frame movable
 mountMusicSettingsFrame:SetMovable(true)
@@ -436,16 +436,45 @@ local musicTableSunwell = {
 }
 
 
--- Create the scrolling parent frame and size it to fit inside the options panel
-local scrollFrame = CreateFrame("ScrollFrame", nil, mountMusicSettingsFrame, "UIPanelScrollFrameTemplate")
-scrollFrame:SetPoint("TOPLEFT", 3, -50)
-scrollFrame:SetPoint("BOTTOMRIGHT", -50, 4)
+local ScrollBox = CreateFrame("Frame", nil, mountMusicSettingsFrame, "WowScrollBoxList")
+ScrollBox:SetPoint("CENTER")
+ScrollBox:SetSize(750, 500)
 
--- Scrolling child frame, set its width to fit, and give it an arbitrary minimum height
-local scrollChild = CreateFrame("Frame")
-scrollFrame:SetScrollChild(scrollChild)
-scrollChild:SetWidth(mmFrameWidth - 50)
-scrollChild:SetHeight(mmFrameHeight / 3)
+local ScrollBar = CreateFrame("EventFrame", nil, mountMusicSettingsFrame, "MinimalScrollBar")
+ScrollBar:SetPoint("TOPLEFT", ScrollBox, "TOPRIGHT")
+ScrollBar:SetPoint("BOTTOMLEFT", ScrollBox, "BOTTOMRIGHT")
+
+
+local ScrollView = CreateScrollBoxListLinearView()
+
+ScrollUtil.InitScrollBoxListWithScrollBar(ScrollBox, ScrollBar, ScrollView)
+
+-- The 'button' argument is the frame that our data will inhabit in our list
+-- The 'data' argument will be the data table mentioned above
+local function Initializer(frame, data)
+    
+end
+
+-- The first argument here can either be a frame type or frame template. We're just passing the "UIPanelButtonTemplate" template here
+ScrollView:SetElementInitializer("Frame", Initializer)
+
+-- Optional Resetter function which you can use to reset your frame or data element.
+local function Resetter(frame, data)
+    -- Insert reset code here
+end
+ScrollView:SetElementResetter(Resetter)
+ScrollView:SetElementExtent(100)
+
+local DataProvider = CreateDataProvider()
+ScrollView:SetDataProvider(DataProvider)
+
+
+
+-- Creating our search box, whenever the user changes the text in this box, it will refresh the display
+local SearchBox = CreateFrame("EditBox", nil, mountMusicSettingsFrame, "SearchBoxTemplate")
+SearchBox:SetPoint("BOTTOMRIGHT", ScrollBox, "TOPRIGHT", 0, 5)
+SearchBox:SetAutoFocus(false)
+SearchBox:SetSize(145, 24)
 
 
 --Create Mount Music ui components for the options panel
@@ -456,11 +485,12 @@ local function createMountUiElements(id, yPos)
     local creatureName, creatureID, icon, active, isUsable, sourceType, isFavorite, isFactionSpecific, faction, hideOnChar, isCollected =
         C_MountJournal.GetDisplayedMountInfo(id)
 
-    local frame = CreateFrame("Frame", "mountMusicUiElement" .. id, scrollChild,
-        "ToolTipBorderedFrameTemplate")
+    local frame = CreateFrame("Frame", nil, mountMusicSettingsFrame, "ToolTipBorderedFrameTemplate")
     frame:SetPoint("CENTER", x, yPos)
     frame:SetWidth(600 - 80)
     frame:SetHeight(70)
+
+    DataProvider:Insert(frame)
 
     local mountIconButton = CreateFrame("Button", nil, frame)
 
@@ -868,39 +898,39 @@ end
 
 --NumMounts always seems to be zero on player login.
 --If it is not zero create the mount ui elements else create a button that will generate the mount music ui.
-if (numMounts ~= 0 and selectedMountMusicValues ~= nil) then
-    for i = 1, numMounts do
-        createMountUiElements(i, mountUiYPos)
-        mountUiYPos = mountUiYPos - 90
-    end
-else
-    local heading = CreateFrame("Frame", nil, mountMusicSettingsFrame)
-    heading:SetSize(400, 60) -- Set a reasonable size for the heading
-    heading:SetPoint("CENTER", 0, 0)
+-- if (numMounts ~= 0 and selectedMountMusicValues ~= nil) then
+--     for i = 1, numMounts do
+--         createMountUiElements(i, mountUiYPos)
+--         mountUiYPos = mountUiYPos - 90
+--     end
+-- else
+--     local heading = CreateFrame("Frame", nil, mountMusicSettingsFrame)
+--     heading:SetSize(400, 60) -- Set a reasonable size for the heading
+--     heading:SetPoint("CENTER", 0, 0)
 
-    heading.text = heading:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
-    heading.text:SetPoint("CENTER", 0, 0)
-    heading.text:SetWidth(400)
-    heading.text:SetJustifyH("CENTER")
-    heading.text:SetJustifyV("TOP")
-    heading.text:SetWordWrap(true)
-    heading.text:SetText("Click generate mount data and then select songs you want played when riding specific mounts.")
+--     heading.text = heading:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+--     heading.text:SetPoint("CENTER", 0, 0)
+--     heading.text:SetWidth(400)
+--     heading.text:SetJustifyH("CENTER")
+--     heading.text:SetJustifyV("TOP")
+--     heading.text:SetWordWrap(true)
+--     heading.text:SetText("Click generate mount data and then select songs you want played when riding specific mounts.")
 
-    local f = CreateFrame("Button", nil, mountMusicSettingsFrame, "UIPanelButtonTemplate")
-    f:SetSize(180, 30)
-    f:SetPoint("CENTER", 0, -50)
-    f:SetText("Generate Mount Data")
-    f:SetScript("OnClick", function()
-        local firstLoadNumMounts = GetNumCompanions("Mount")
-        numMounts = firstLoadNumMounts
-        for i = 1, firstLoadNumMounts do
-            createMountUiElements(i, mountUiYPos)
-            mountUiYPos = mountUiYPos - 90
-        end
-        heading:Hide()
-        f:Hide()
-    end)
-end
+--     local f = CreateFrame("Button", nil, mountMusicSettingsFrame, "UIPanelButtonTemplate")
+--     f:SetSize(180, 30)
+--     f:SetPoint("CENTER", 0, -50)
+--     f:SetText("Generate Mount Data")
+--     f:SetScript("OnClick", function()
+--         local firstLoadNumMounts = GetNumCompanions("Mount")
+--         numMounts = firstLoadNumMounts
+--         for i = 1, firstLoadNumMounts do
+--             createMountUiElements(i, mountUiYPos)
+--             mountUiYPos = mountUiYPos - 90
+--         end
+--         heading:Hide()
+--         f:Hide()
+--     end)
+-- end
 
 
 
@@ -915,6 +945,10 @@ local function onEvent(self, event, ...)
             if selectedMountMusicValues == nil then
                 _G.selectedMountMusicValues = {}
             end
+        end
+        for i = 1, numMounts do
+            createMountUiElements(i, mountUiYPos)
+            mountUiYPos = mountUiYPos - 90
         end
     end
     if event == "UNIT_AURA" then

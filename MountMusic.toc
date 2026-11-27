@@ -1,4 +1,4 @@
-## Interface: 110200
+## Interface: 120105
 ## Title: Mount Music
 ## Notes: Mount Music addon
 ## Author: Kaleb Pierce
