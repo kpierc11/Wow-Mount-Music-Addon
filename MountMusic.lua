@@ -570,7 +570,7 @@ druidTabButton:Hide()
 
 local mountScrollFrame = CreateFrame("ScrollFrame", nil, mountMusicSettingsFrame, "UIPanelScrollFrameTemplate")
 mountScrollFrame:SetPoint("TOPLEFT", 12, -75)
-mountScrollFrame:SetPoint("BOTTOMRIGHT", -35, 161)
+mountScrollFrame:SetPoint("BOTTOMRIGHT", -35, 145)
 mountScrollFrame:Hide()
 
 local mountScrollChild = CreateFrame("Frame")
@@ -579,7 +579,7 @@ mountScrollFrame:SetScrollChild(mountScrollChild)
 
 local druidScrollFrame = CreateFrame("ScrollFrame", nil, mountMusicSettingsFrame, "UIPanelScrollFrameTemplate")
 druidScrollFrame:SetPoint("TOPLEFT", 12, -75)
-druidScrollFrame:SetPoint("BOTTOMRIGHT", -35, 161)
+druidScrollFrame:SetPoint("BOTTOMRIGHT", -35, 145)
 druidScrollFrame:Hide()
 
 local druidScrollChild = CreateFrame("Frame")
@@ -1428,13 +1428,13 @@ local function createDruidFormUiElements()
         return 0
     end
 
-    local yPos = 0
+    local yPos = 8
     for _, form in ipairs(druidFormDefinitions) do
         createMountUiElements(druidScrollChild, yPos, form.name, getDruidFormIcon(form))
         yPos = yPos + 44
     end
 
-    return yPos
+    return yPos + 8
 end
 
 local function buildSettingsRows()
@@ -1446,12 +1446,12 @@ local function buildSettingsRows()
     mountEntries = getMountJournalEntries()
     mountScrollFrame:SetVerticalScroll(0)
     druidScrollFrame:SetVerticalScroll(0)
-    local yPos = 0
+    local yPos = 8
     for _, mountData in ipairs(mountEntries) do
         createMountUiElements(mountScrollChild, yPos, nil, nil, mountData)
         yPos = yPos + 44
     end
-    mountScrollChild:SetHeight(math.max(mountScrollFrame:GetHeight(), yPos))
+    mountScrollChild:SetHeight(math.max(mountScrollFrame:GetHeight(), yPos + 8))
 
     local _, classToken = UnitClass("player")
     if classToken == "DRUID" then
