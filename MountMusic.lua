@@ -597,42 +597,6 @@ local function playMountMusic()
 end
 
 
---NumMounts always seems to be zero on player login.
---If it is not zero create the mount ui elements else create a button that will generate the mount music ui.
-if (numMounts ~= 0 and selectedMountMusicValues ~= nil) then
-    for i = 1, numMounts do
-        createMountUiElements(i, mountUiYPos)
-        mountUiYPos = mountUiYPos - 90
-    end
-else
-    local heading = CreateFrame("Frame", nil, mountMusicSettingsFrame)
-    heading:SetSize(400, 60) -- Set a reasonable size for the heading
-    heading:SetPoint("CENTER", 0, 0)
-
-    heading.text = heading:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
-    heading.text:SetPoint("CENTER", 0, 0)
-    heading.text:SetWidth(400)
-    heading.text:SetJustifyH("CENTER")
-    heading.text:SetJustifyV("TOP")
-    heading.text:SetWordWrap(true)
-    heading.text:SetText("Click generate mount data and then select songs you want played when riding specific mounts.")
-
-    local f = CreateFrame("Button", nil, mountMusicSettingsFrame, "UIPanelButtonTemplate")
-    f:SetSize(180, 30)
-    f:SetPoint("CENTER", 0, -50)
-    f:SetText("Generate Mount Data")
-    f:SetScript("OnClick", function()
-        local firstLoadNumMounts = GetNumCompanions("Mount")
-        numMounts = firstLoadNumMounts
-        for i = 1, firstLoadNumMounts do
-            createMountUiElements(i, mountUiYPos)
-            mountUiYPos = mountUiYPos - 90
-        end
-        heading:Hide()
-        f:Hide()
-    end)
-end
-
 local function showMountUI()
     for i = 1, numMounts do
         createMountUiElements(i, mountUiYPos)
