@@ -1943,9 +1943,6 @@ local function onEvent(self, event, ...)
             updateMusicPlayback()
         end)
     end
-    if event == "PLAYER_STARTED_SWIMMING" or event == "PLAYER_STOPPED_SWIMMING" then
-        updateMusicPlayback()
-    end
 end
 
 --Register events and scripts --
@@ -1954,7 +1951,5 @@ mountMusicSettingsFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 mountMusicSettingsFrame:RegisterEvent("PLAYER_LOGOUT")
 mountMusicSettingsFrame:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
 mountMusicSettingsFrame:RegisterEvent("PLAYER_MOUNT_DISPLAY_CHANGED")
-mountMusicSettingsFrame:RegisterEvent("PLAYER_STARTED_SWIMMING")
-mountMusicSettingsFrame:RegisterEvent("PLAYER_STOPPED_SWIMMING")
 mountMusicSettingsFrame:RegisterUnitEvent("UNIT_AURA", "player")
 mountMusicSettingsFrame:SetScript("OnEvent", onEvent)
