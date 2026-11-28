@@ -1,10 +1,12 @@
 
--- Initial options frame
+-- ---------------------------------------------------------------------------
+-- SETTINGS FRAME
+-- ---------------------------------------------------------------------------
 local mountMusicSettingsFrame = CreateFrame("Frame", nil, UIParent, "SettingsFrameTemplate")
 local mmFrameWidth            = 800
 local mmFrameHeight           = 700
 
---Set Title of the Mount Music setting frame
+-- Frame title
 local title                   = mountMusicSettingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 title:SetPoint("TOPLEFT", 12, -4)
 title:SetJustifyH("LEFT")
@@ -17,7 +19,7 @@ mountMusicSettingsFrame:SetPoint("CENTER")
 mountMusicSettingsFrame:SetSize(mmFrameWidth, mmFrameHeight)
 mountMusicSettingsFrame:Hide()
 
--- Make frame movable
+-- Make the frame movable
 mountMusicSettingsFrame:SetMovable(true)
 mountMusicSettingsFrame:EnableMouse(true)
 mountMusicSettingsFrame:RegisterForDrag("LeftButton")
@@ -25,7 +27,9 @@ mountMusicSettingsFrame:SetScript("OnDragStart", mountMusicSettingsFrame.StartMo
 mountMusicSettingsFrame:SetScript("OnDragStop", mountMusicSettingsFrame.StopMovingOrSizing)
 
 
--- Ensure saved variable exists
+-- ---------------------------------------------------------------------------
+-- SAVED VARIABLES AND SELECTION DRAFT
+-- ---------------------------------------------------------------------------
 MountMusicDB = MountMusicDB or {}
 selectedMountMusicValues = selectedMountMusicValues or {}
 selectedDruidFormMusicValues = selectedDruidFormMusicValues or {}
@@ -101,13 +105,13 @@ local manualPlaybackTargetKey
 local pausedTargetKey
 local settingsOpenToken = 0
 
--- Load LibDBIcon
+-- ---------------------------------------------------------------------------
+-- MINIMAP BUTTON
+-- ---------------------------------------------------------------------------
 local LDBIcon = LibStub("LibDBIcon-1.0")
 
--- Create a basic minimap button (no LDB)
 local button = {
     icon = "Interface\\Icons\\ability_mount_ridinghorse",
-    -- What happens when the minimap icon is clicked
     OnClick = function(_, button)
         if mountMusicSettingsFrame:IsShown() then
             mountMusicSettingsFrame:Hide()
@@ -115,16 +119,17 @@ local button = {
             mountMusicSettingsFrame:Show()
         end
     end,
-    -- Tooltip text
     OnTooltipShow = function(tooltip)
         tooltip:AddLine("Mount Music")
         tooltip:AddLine("Click to open Mount Music settings.", 1, 1, 1)
     end,
 }
 
--- Register it with LibDBIcon directly
 LDBIcon:Register("MountMusic", button, MountMusicDB.minimap)
 
+-- ---------------------------------------------------------------------------
+-- MUSIC CATALOG
+-- ---------------------------------------------------------------------------
 local musicTableStormwind = {
     ["stormwind 01 moment"] = 53202,
     ["stormwind 02 moment"] = 53202,
@@ -435,6 +440,9 @@ local musicTableSunwell = {
     ["Plateau Sunwell Walk Uni 05"] = 53726
 }
 
+-- ---------------------------------------------------------------------------
+-- MUSIC TRACK INDEX AND RANDOM SELECTION
+-- ---------------------------------------------------------------------------
 local allMusicTracks = {}
 local seenMusicFileIDs = {}
 local musicTrackByFileID = {}
@@ -524,6 +532,9 @@ local function getRandomUnassignedMusicTrack()
 end
 
 
+-- ---------------------------------------------------------------------------
+-- SETTINGS TABS
+-- ---------------------------------------------------------------------------
 local mountTabButton = CreateFrame("Button", nil, mountMusicSettingsFrame, "UIPanelButtonTemplate")
 mountTabButton:SetSize(140, 26)
 mountTabButton:SetPoint("TOPLEFT", 12, -42)
@@ -609,6 +620,9 @@ closeButton:SetScript("OnClick", function()
     mountMusicSettingsFrame:Hide()
 end)
 
+-- ---------------------------------------------------------------------------
+-- ON-SCREEN TRACK DISPLAY
+-- ---------------------------------------------------------------------------
 local screenTrackButton
 local refreshScreenTrackButton
 local screenTrackFrame = CreateFrame("Frame", "MountMusicScreenTrackFrame", UIParent, "BackdropTemplate")
@@ -758,6 +772,9 @@ end
 
 setControlTooltip(screenStopButton, "Stop Music")
 
+-- ---------------------------------------------------------------------------
+-- SETTINGS PLAYBACK CONTROLS
+-- ---------------------------------------------------------------------------
 local stopButton = CreateFrame("Button", nil, mountMusicSettingsFrame)
 stopButton:SetSize(30, 26)
 stopButton:SetPoint("BOTTOMLEFT", 12, 14)
@@ -871,6 +888,9 @@ local function setModernHoverHighlight(button)
     button:GetHighlightTexture():SetVertexColor(0.82, 0.58, 0.16, 0.22)
 end
 
+-- ---------------------------------------------------------------------------
+-- DRUID FORM DEFINITIONS
+-- ---------------------------------------------------------------------------
 local druidFormDefinitions = {
     { name = "Bear Form", spellID = 5487, fallbackIcon = "Interface\\Icons\\Ability_Racial_BearForm" },
     { name = "Dire Bear Form", spellID = 9634, fallbackIcon = "Interface\\Icons\\Ability_Racial_BearForm" },
@@ -912,6 +932,9 @@ local druidFormNamesByFormID = {
     [35] = "Moonkin Form",
 }
 
+-- ---------------------------------------------------------------------------
+-- MOUNT JOURNAL AND DRUID HELPERS
+-- ---------------------------------------------------------------------------
 local function getMountJournalEntries()
     local entries = {}
     if C_MountJournal and C_MountJournal.GetMountIDs and C_MountJournal.GetMountInfoByID then
@@ -949,6 +972,9 @@ local function getDruidFormIcon(form)
     return form.fallbackIcon
 end
 
+-- ---------------------------------------------------------------------------
+-- SETTINGS PAGE BUILD
+-- ---------------------------------------------------------------------------
 local function buildSettingsRows()
     mountEntries = getMountJournalEntries()
     buildAssignmentPages()
@@ -963,7 +989,9 @@ local function buildSettingsRows()
 end
 
 
--- Track and manage the selected mount/form music.
+-- ---------------------------------------------------------------------------
+-- ACTIVE TARGET AND PLAYBACK STATE
+-- ---------------------------------------------------------------------------
 local manualPlaySequence = 0
 local formTransitionToken = 0
 local formTransitionPending = false
@@ -1156,6 +1184,9 @@ local function startMusicTrack(fileID, trackKey, trackName)
     return true
 end
 
+-- ---------------------------------------------------------------------------
+-- MUSIC ASSIGNMENT MENU DATA
+-- ---------------------------------------------------------------------------
 local playerMenuCategories = {
     cityMusic = {
         { text = "Darnassus", menuList = "darnassus" },
@@ -1219,6 +1250,9 @@ local assignmentAccordionRoots = {
     { text = "Zone Music", menuList = "zoneMusic", children = playerMenuCategories.zoneMusic },
 }
 
+-- ---------------------------------------------------------------------------
+-- MUSIC ASSIGNMENT UI
+-- ---------------------------------------------------------------------------
 local function setCollectionHover(button)
     setModernHoverHighlight(button)
 end
@@ -1683,6 +1717,9 @@ local function restoreMusicAfterFormChange()
     setPlaybackButtonVisual(false)
 end
 
+-- ---------------------------------------------------------------------------
+-- PLAYBACK ACTIONS
+-- ---------------------------------------------------------------------------
 stopMusicNow = function()
     pausedTargetKey = getActiveMusicTarget()
     MountMusicDB.musicStopRestoreValue = "1"
@@ -1804,6 +1841,9 @@ updateMusicPlayback = function()
     startMusicTrack(fileID, targetKey, songName)
 end
 
+-- ---------------------------------------------------------------------------
+-- FORM AND AUTO-PLAY WATCHERS
+-- ---------------------------------------------------------------------------
 local lastObservedDruidFormName = getCurrentDruidFormName()
 local druidFormCheckElapsed = 0
 local druidFormTracker = CreateFrame("Frame")
@@ -1877,21 +1917,15 @@ mountMusicSettingsFrame:HookScript("OnHide", function()
     settingsOpenToken = settingsOpenToken + 1
 end)
 
-
-
---Handle events
+-- ---------------------------------------------------------------------------
+-- EVENT HANDLING
+-- ---------------------------------------------------------------------------
 local function onEvent(self, event, ...)
     if event == "ADDON_LOADED" then
         local addonName = ...
         if addonName == "MountMusic" then
             print("MountMusic version 1.0.0 loaded. Enjoy!")
             print("Click the Mount Music minimap icon to open and load settings.")
-            if selectedMountMusicValues == nil then
-                _G.selectedMountMusicValues = {}
-            end
-            if selectedDruidFormMusicValues == nil then
-                _G.selectedDruidFormMusicValues = {}
-            end
         end
     end
     if event == "PLAYER_LOGOUT"
@@ -1945,7 +1979,7 @@ local function onEvent(self, event, ...)
     end
 end
 
---Register events and scripts --
+-- Register addon events
 mountMusicSettingsFrame:RegisterEvent("ADDON_LOADED")
 mountMusicSettingsFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 mountMusicSettingsFrame:RegisterEvent("PLAYER_LOGOUT")
