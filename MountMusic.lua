@@ -3,8 +3,6 @@
 -- SETTINGS FRAME
 -- ---------------------------------------------------------------------------
 local mountMusicSettingsFrame = CreateFrame("Frame", nil, UIParent, "SettingsFrameTemplate")
-local mmFrameWidth            = 800
-local mmFrameHeight           = 700
 
 -- Frame title
 local title                   = mountMusicSettingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
@@ -16,7 +14,7 @@ title:SetFont(file, 14, flags)
 
 
 mountMusicSettingsFrame:SetPoint("CENTER")
-mountMusicSettingsFrame:SetSize(mmFrameWidth, mmFrameHeight)
+mountMusicSettingsFrame:SetSize(800, 700)
 mountMusicSettingsFrame:Hide()
 
 -- Make the frame movable
@@ -99,7 +97,6 @@ local currentMusicKey
 local currentMusicFileID
 local currentMusicTrackName
 local currentMusicStartedAt
-local currentActiveTargetName
 local manualPlaybackOverride = false
 local manualPlaybackTargetKey
 local pausedTargetKey
@@ -112,7 +109,7 @@ local LDBIcon = LibStub("LibDBIcon-1.0")
 
 local button = {
     icon = "Interface\\Icons\\ability_mount_ridinghorse",
-    OnClick = function(_, button)
+    OnClick = function()
         if mountMusicSettingsFrame:IsShown() then
             mountMusicSettingsFrame:Hide()
         else
@@ -1101,7 +1098,7 @@ end
 local function getActiveMusicTarget()
     local formName = getCurrentDruidFormName()
     if formName then
-        return "form:" .. formName, selectedDruidFormMusicValues[formName], "form", formName
+        return "form:" .. formName, selectedDruidFormMusicValues[formName], "form"
     end
 
     if #mountEntries == 0 then
@@ -1111,7 +1108,7 @@ local function getActiveMusicTarget()
         for _, mountData in ipairs(mountEntries) do
             local _, creatureID, _, isActive = C_MountJournal.GetMountInfoByID(mountData.mountID)
             if isActive then
-                return "mount:" .. tostring(creatureID), selectedMountMusicValues[creatureID], "mount", mountData.name
+                return "mount:" .. tostring(creatureID), selectedMountMusicValues[creatureID], "mount"
             end
         end
     end
@@ -1164,7 +1161,6 @@ local function startMusicTrack(fileID, trackKey, trackName)
         SetCVar("Sound_EnableMusic", "1")
     end
     MountMusicDB.musicStoppedByAddon = nil
-    MountMusicDB.musicStopRestoreValue = nil
     pausedTargetKey = nil
     setPlaybackButtonVisual(false)
     if trackKey == currentMusicKey
@@ -1712,7 +1708,6 @@ local function restoreMusicAfterFormChange()
 
     SetCVar("Sound_EnableMusic", "1")
     MountMusicDB.musicStoppedByAddon = nil
-    MountMusicDB.musicStopRestoreValue = nil
     pausedTargetKey = nil
     setPlaybackButtonVisual(false)
 end
@@ -1722,7 +1717,6 @@ end
 -- ---------------------------------------------------------------------------
 stopMusicNow = function()
     pausedTargetKey = getActiveMusicTarget()
-    MountMusicDB.musicStopRestoreValue = "1"
     MountMusicDB.musicStoppedByAddon = true
     setPlaybackButtonVisual(true)
     -- Retain the track ID so Play can restart it.
@@ -1739,7 +1733,6 @@ toggleMusicStop = function()
 
     SetCVar("Sound_EnableMusic", "1")
     MountMusicDB.musicStoppedByAddon = nil
-    MountMusicDB.musicStopRestoreValue = nil
     pausedTargetKey = nil
     setPlaybackButtonVisual(false)
 
@@ -1775,7 +1768,6 @@ playAutoplayTrack = function()
     manualPlaybackOverride = false
     manualPlaybackTargetKey = nil
     manualPlaySequence = manualPlaySequence + 1
-    currentActiveTargetName = "Auto Play"
     return startMusicTrack(track.fileID, "autoplay:" .. manualPlaySequence, track.name)
 end
 
@@ -1795,7 +1787,6 @@ updateMusicPlayback = function()
         return
     end
     if MountMusicDB.autoPlayEnabled then
-        currentActiveTargetName = "Auto Play"
         refreshMusicPlayer()
         if MountMusicDB.musicStoppedByAddon or GetCVar("Sound_EnableMusic") == "0" then
             return
@@ -1805,8 +1796,7 @@ updateMusicPlayback = function()
         end
         return
     end
-    local targetKey, selection, targetType, targetName = getActiveMusicTarget()
-    currentActiveTargetName = targetName
+    local targetKey, selection, targetType = getActiveMusicTarget()
     refreshMusicPlayer()
     if MountMusicDB.musicStoppedByAddon then
         if targetKey == pausedTargetKey then
@@ -1920,7 +1910,7 @@ end)
 -- ---------------------------------------------------------------------------
 -- EVENT HANDLING
 -- ---------------------------------------------------------------------------
-local function onEvent(self, event, ...)
+local function onEvent(_, event, ...)
     if event == "ADDON_LOADED" then
         local addonName = ...
         if addonName == "MountMusic" then
