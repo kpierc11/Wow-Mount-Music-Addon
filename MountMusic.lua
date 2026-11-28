@@ -29,6 +29,23 @@ mountMusicSettingsFrame:SetScript("OnDragStop", mountMusicSettingsFrame.StopMovi
 -- SAVED VARIABLES AND SELECTION DRAFT
 -- ---------------------------------------------------------------------------
 MountMusicDB = MountMusicDB or {}
+if type(MountMusicDB.minimap) ~= "table" then
+    MountMusicDB.minimap = {}
+end
+local function getMountCollectionFilter()
+    if type(MountMusicDB.mountCollectionFilter) ~= "table" then
+        MountMusicDB.mountCollectionFilter = {}
+    end
+    local filters = MountMusicDB.mountCollectionFilter
+    if filters.collected == nil then
+        filters.collected = true
+    end
+    if filters.uncollected == nil then
+        filters.uncollected = true
+    end
+    return filters
+end
+getMountCollectionFilter()
 selectedMountMusicValues = selectedMountMusicValues or {}
 selectedDruidFormMusicValues = selectedDruidFormMusicValues or {}
 local function copyMusicSelections(source)
@@ -123,6 +140,30 @@ local button = {
 }
 
 LDBIcon:Register("MountMusic", button, MountMusicDB.minimap)
+local function saveMinimapButtonPosition(position)
+    if type(MountMusicDB.minimap) ~= "table" then
+        MountMusicDB.minimap = {}
+    end
+    MountMusicDB.minimap.minimapPos = position
+    local icon = LDBIcon:GetMinimapButton("MountMusic")
+    if icon then
+        icon.db = MountMusicDB.minimap
+    end
+end
+
+local minimapButton = LDBIcon:GetMinimapButton("MountMusic")
+if minimapButton then
+    minimapButton:HookScript("OnDragStop", function()
+        local cursorX, cursorY = GetCursorPosition()
+        local minimapX, minimapY = Minimap:GetCenter()
+        local scale = Minimap:GetEffectiveScale()
+        if cursorX and cursorY and minimapX and minimapY and scale then
+            saveMinimapButtonPosition(
+                math.deg(math.atan2(cursorY / scale - minimapY, cursorX / scale - minimapX)) % 360
+            )
+        end
+    end)
+end
 
 -- ---------------------------------------------------------------------------
 -- MUSIC CATALOG
@@ -539,14 +580,22 @@ mountTabButton:SetText("Mounts")
 mountTabButton:Hide()
 
 local druidTabButton = CreateFrame("Button", nil, mountMusicSettingsFrame, "UIPanelButtonTemplate")
-druidTabButton:SetSize(140, 26)
+druidTabButton:SetSize(190, 26)
 druidTabButton:SetPoint("LEFT", mountTabButton, "RIGHT", 12, 0)
 druidTabButton:SetText("Druid Forms")
 druidTabButton:Hide()
+druidTabButton:SetScript("OnEnter", function(self)
+    if not self:IsEnabled() then
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        GameTooltip:SetText("You need to be on a Druid to use this tab.")
+        GameTooltip:Show()
+    end
+end)
+druidTabButton:SetScript("OnLeave", GameTooltip_Hide)
 
 local mountScrollFrame = CreateFrame("Frame", nil, mountMusicSettingsFrame)
 mountScrollFrame:SetPoint("TOPLEFT", 12, -75)
-mountScrollFrame:SetPoint("BOTTOMRIGHT", -35, 60)
+mountScrollFrame:SetPoint("BOTTOMRIGHT", -12, 60)
 mountScrollFrame:Hide()
 
 local mountScrollChild = CreateFrame("Frame", nil, mountScrollFrame)
@@ -554,23 +603,24 @@ mountScrollChild:SetAllPoints()
 
 local druidScrollFrame = CreateFrame("Frame", nil, mountMusicSettingsFrame)
 druidScrollFrame:SetPoint("TOPLEFT", 12, -75)
-druidScrollFrame:SetPoint("BOTTOMRIGHT", -35, 60)
+druidScrollFrame:SetPoint("BOTTOMRIGHT", -12, 60)
 druidScrollFrame:Hide()
 
 local druidScrollChild = CreateFrame("Frame", nil, druidScrollFrame)
 druidScrollChild:SetAllPoints()
 
 local function selectSettingsTab(tab)
+    local _, classToken = UnitClass("player")
+    local isDruid = classToken == "DRUID"
     if tab == "druid" then
-        local _, classToken = UnitClass("player")
-        if classToken ~= "DRUID" then
+        if not isDruid then
             return
         end
     end
 
     MountMusicDB.assignmentTab = tab
     mountTabButton:SetEnabled(tab ~= "mounts")
-    druidTabButton:SetEnabled(tab ~= "druid")
+    druidTabButton:SetEnabled(isDruid and tab ~= "druid")
     if settingsRowsBuilt then
         if tab == "mounts" then
             mountScrollFrame:Show()
@@ -933,21 +983,27 @@ local druidFormNamesByFormID = {
 -- MOUNT JOURNAL AND DRUID HELPERS
 -- ---------------------------------------------------------------------------
 local function getMountJournalEntries()
-    local entries = {}
+    local entriesBySpellID = {}
     if C_MountJournal and C_MountJournal.GetMountIDs and C_MountJournal.GetMountInfoByID then
         for _, mountID in ipairs(C_MountJournal.GetMountIDs() or {}) do
             local name, spellID, icon, _, _, _, _, _, _, hideOnChar, isCollected =
                 C_MountJournal.GetMountInfoByID(mountID)
-            if name and not hideOnChar then
-                table.insert(entries, {
+            local existing = spellID and entriesBySpellID[spellID]
+            if name and not hideOnChar and spellID
+                and (not existing or (isCollected and not existing.isCollected)) then
+                entriesBySpellID[spellID] = {
                     mountID = mountID,
                     name = name,
                     spellID = spellID,
                     icon = icon,
                     isCollected = isCollected,
-                })
+                }
             end
         end
+    end
+    local entries = {}
+    for _, entry in pairs(entriesBySpellID) do
+        table.insert(entries, entry)
     end
     table.sort(entries, function(left, right)
         return left.name < right.name
@@ -978,7 +1034,16 @@ local function buildSettingsRows()
 
     local _, classToken = UnitClass("player")
     mountTabButton:Show()
-    druidTabButton:SetShown(classToken == "DRUID")
+    druidTabButton:Show()
+    if classToken == "DRUID" then
+        druidTabButton:SetSize(140, 26)
+        druidTabButton:SetText("Druid Forms")
+        druidTabButton:SetEnabled(MountMusicDB.assignmentTab ~= "druid")
+    else
+        druidTabButton:SetSize(190, 26)
+        druidTabButton:SetText("Druid Forms (Need Druid)")
+        druidTabButton:Disable()
+    end
     settingsRowsBuilt = true
     local initialTab = classToken == "DRUID" and MountMusicDB.assignmentTab == "druid"
         and "druid" or "mounts"
@@ -1334,6 +1399,15 @@ local function assignBookTrack(book, songName, fileID)
     refreshBookSelection(book)
 end
 
+local function enableMouseWheelScrolling(scrollFrame, stepSize)
+    scrollFrame:EnableMouseWheel(true)
+    scrollFrame:HookScript("OnMouseWheel", function(self, delta)
+        local maxScroll = self:GetVerticalScrollRange()
+        local scroll = self:GetVerticalScroll() - (delta * stepSize)
+        self:SetVerticalScroll(math.max(0, math.min(maxScroll, scroll)))
+    end)
+end
+
 local function createAssignmentBook(page, kind, pageTitle)
     local book = {
         kind = kind,
@@ -1346,10 +1420,10 @@ local function createAssignmentBook(page, kind, pageTitle)
 
     book.leftPage = CreateFrame("Frame", nil, page, "ToolTipBorderedFrameTemplate")
     book.leftPage:SetPoint("TOPLEFT", page, "TOPLEFT", 5, -5)
-    book.leftPage:SetPoint("BOTTOMRIGHT", page, "BOTTOMLEFT", 270, 5)
+    book.leftPage:SetPoint("BOTTOMRIGHT", page, "BOTTOMLEFT", 305, 5)
 
     book.rightPage = CreateFrame("Frame", nil, page, "ToolTipBorderedFrameTemplate")
-    book.rightPage:SetPoint("TOPLEFT", page, "TOPLEFT", 276, -5)
+    book.rightPage:SetPoint("TOPLEFT", page, "TOPLEFT", 311, -5)
     book.rightPage:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -5, 5)
 
     book.pageHeading = book.leftPage:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -1357,12 +1431,99 @@ local function createAssignmentBook(page, kind, pageTitle)
     book.pageHeading:SetText(pageTitle)
     book.pageHeading:SetTextColor(1, 0.82, 0)
 
+    if kind == "mount" then
+        book.mountFilterBar = CreateFrame("Frame", nil, book.leftPage)
+        book.mountFilterBar:SetPoint("TOPLEFT", book.leftPage, "TOPLEFT", 10, -30)
+        book.mountFilterBar:SetPoint("TOPRIGHT", book.leftPage, "TOPRIGHT", -10, -30)
+        book.mountFilterBar:SetHeight(24)
+
+        book.searchBox = CreateFrame("EditBox", nil, book.leftPage, "InputBoxTemplate")
+        book.searchBox:SetSize(104, 22)
+        book.searchBox:SetPoint("LEFT", book.mountFilterBar, "LEFT", 8, 0)
+        book.searchBox:SetTextInsets(10, 6, 0, 0)
+        book.searchBox:SetAutoFocus(false)
+        book.searchBox:SetMaxLetters(80)
+        book.searchBox:SetScript("OnEscapePressed", function(self)
+            self:SetText("")
+            self:ClearFocus()
+        end)
+
+        book.searchPlaceholder = book.searchBox:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+        book.searchPlaceholder:SetPoint("LEFT", 10, 0)
+        book.searchPlaceholder:SetText("Search mounts...")
+        book.searchPlaceholder:Show()
+
+        book.searchBox:SetScript("OnEditFocusGained", function()
+            book.searchPlaceholder:Hide()
+        end)
+        book.searchBox:SetScript("OnEditFocusLost", function()
+            book.searchPlaceholder:SetShown(book.searchBox:GetText() == "")
+        end)
+        book.searchBox:SetScript("OnTextChanged", function(self)
+            book.searchPlaceholder:SetShown(self:GetText() == "")
+            if book.setEntities and book.allEntities then
+                book.setEntities(book.allEntities, MountMusicDB.selectedMountAssignmentID)
+            end
+        end)
+
+        book.collectionFilterDropdown = CreateFrame(
+            "Frame",
+            nil,
+            book.leftPage,
+            "UIDropDownMenuTemplate"
+        )
+        book.collectionFilterDropdown:SetPoint("RIGHT", book.mountFilterBar, "RIGHT")
+        UIDropDownMenu_SetWidth(book.collectionFilterDropdown, 116)
+        book.searchBox:SetPoint("RIGHT", book.collectionFilterDropdown, "LEFT", 8, 0)
+
+        local function refreshCollectionFilterDropdown()
+            local filters = getMountCollectionFilter()
+            local label
+            if filters.collected and filters.uncollected then
+                label = "All Mounts"
+            elseif filters.collected then
+                label = "Collected"
+            elseif filters.uncollected then
+                label = "Uncollected"
+            else
+                label = "None"
+            end
+            UIDropDownMenu_SetText(book.collectionFilterDropdown, label)
+        end
+
+        UIDropDownMenu_Initialize(book.collectionFilterDropdown, function(_, level)
+            for _, filter in ipairs({
+                { key = "collected", text = "Collected" },
+                { key = "uncollected", text = "Uncollected" },
+            }) do
+                local filterKey = filter.key
+                local info = UIDropDownMenu_CreateInfo()
+                info.text = filter.text
+                info.isNotRadio = true
+                info.keepShownOnClick = true
+                info.checked = function()
+                    return getMountCollectionFilter()[filterKey]
+                end
+                info.func = function()
+                    local filters = getMountCollectionFilter()
+                    filters[filterKey] = not filters[filterKey]
+                    refreshCollectionFilterDropdown()
+                    if book.setEntities and book.allEntities then
+                        book.setEntities(book.allEntities, MountMusicDB.selectedMountAssignmentID)
+                    end
+                end
+                UIDropDownMenu_AddButton(info, level)
+            end
+        end)
+        refreshCollectionFilterDropdown()
+    end
+
     book.listScroll = CreateFrame("ScrollFrame", nil, book.leftPage, "ScrollFrameTemplate")
-    book.listScroll:SetPoint("TOPLEFT", book.leftPage, "TOPLEFT", 8, -26)
+    book.listScroll:SetPoint("TOPLEFT", book.leftPage, "TOPLEFT", 8, kind == "mount" and -58 or -26)
     book.listScroll:SetPoint("BOTTOMRIGHT", book.leftPage, "BOTTOMRIGHT", -24, 16)
-    book.listScroll:EnableMouseWheel(true)
+    enableMouseWheelScrolling(book.listScroll, 56)
     book.listContent = CreateFrame("Frame", nil, book.listScroll)
-    book.listContent:SetWidth(220)
+    book.listContent:SetWidth(245)
     book.listScroll:SetScrollChild(book.listContent)
 
     book.emptyText = book.listContent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -1372,13 +1533,13 @@ local function createAssignmentBook(page, kind, pageTitle)
 
     book.entityTitle = book.rightPage:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     book.entityTitle:SetPoint("TOPLEFT", book.rightPage, "TOPLEFT", 10, -8)
-    book.entityTitle:SetWidth(math.max(320, book.rightPage:GetWidth() - 20))
+    book.entityTitle:SetPoint("RIGHT", book.rightPage, "RIGHT", -10, 0)
     book.entityTitle:SetJustifyH("LEFT")
     book.entityTitle:SetTextColor(1, 0.82, 0)
 
     book.assignmentText = book.rightPage:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     book.assignmentText:SetPoint("TOPLEFT", book.entityTitle, "BOTTOMLEFT", 0, -3)
-    book.assignmentText:SetWidth(math.max(320, book.rightPage:GetWidth() - 20))
+    book.assignmentText:SetPoint("RIGHT", book.rightPage, "RIGHT", -10, 0)
     book.assignmentText:SetJustifyH("LEFT")
 
     book.randomButton = CreateFrame("Button", nil, book.rightPage, "UIPanelButtonTemplate")
@@ -1427,36 +1588,30 @@ local function createAssignmentBook(page, kind, pageTitle)
     book.accordionScroll = CreateFrame("ScrollFrame", nil, book.rightPage, "ScrollFrameTemplate")
     book.accordionScroll:SetPoint("TOPLEFT", book.randomButton, "BOTTOMLEFT", 0, -8)
     book.accordionScroll:SetPoint("BOTTOMRIGHT", book.rightPage, "BOTTOMRIGHT", -26, 8)
-    book.accordionScroll:EnableMouseWheel(true)
+    enableMouseWheelScrolling(book.accordionScroll, 24)
     book.accordionContent = CreateFrame("Frame", nil, book.accordionScroll)
-    book.accordionContent:SetWidth(math.max(305, book.rightPage:GetWidth() - 60))
+    local function updateAccordionContentWidth()
+        book.accordionContent:SetWidth(math.max(305, book.accordionScroll:GetWidth()))
+    end
+    book.accordionScroll:HookScript("OnSizeChanged", updateAccordionContentWidth)
+    updateAccordionContentWidth()
     book.accordionScroll:SetScrollChild(book.accordionContent)
 
-    function book.setEntities(entities, savedEntityID)
+    local function renderEntityRows()
+        local entities = book.visibleEntities or {}
         local rowHeight = 52
+        local rowStep = 56
         local iconSize = 40
-        local rowSpacing = 4
         local textOffset = iconSize + 12
         local textWidth = book.listContent:GetWidth() - textOffset - 8
-        local selectedEntity
-        for _, entity in ipairs(entities) do
-            if entity.id == savedEntityID then
-                selectedEntity = entity
-                break
-            end
-        end
-        book.selectedEntity = selectedEntity or entities[1]
-        local assignedName, assignedFileID = getBookSelection(book)
-        if assignedFileID and assignedFileID ~= "noMusic" then
-            book.previewTrackName = assignedName
-            book.previewTrackFileID = assignedFileID
-        else
-            book.previewTrackName = nil
-            book.previewTrackFileID = nil
-        end
+        local firstIndex = math.max(1, math.floor(book.listScroll:GetVerticalScroll() / rowStep))
+        local visibleCount = math.ceil(book.listScroll:GetHeight() / rowStep) + 2
+        local lastIndex = math.min(#entities, firstIndex + visibleCount - 1)
+        local rowNumber = 0
 
-        for index, entity in ipairs(entities) do
-            local row = book.entityRows[index]
+        for entityIndex = firstIndex, lastIndex do
+            rowNumber = rowNumber + 1
+            local row = book.entityRows[rowNumber]
             if not row then
                 row = CreateFrame("Button", nil, book.listContent)
                 row:SetHeight(rowHeight)
@@ -1481,23 +1636,30 @@ local function createAssignmentBook(page, kind, pageTitle)
                 row.icon:SetPoint("LEFT", 4, 0)
                 row.nameText = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
                 row.nameText:SetPoint("TOPLEFT", row, "TOPLEFT", textOffset, -13)
-                row.nameText:SetWidth(textWidth)
                 row.nameText:SetWordWrap(false)
                 row.nameText:SetJustifyH("CENTER")
                 row.assignmentText = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
                 row.assignmentText:SetPoint("TOPLEFT", row.nameText, "BOTTOMLEFT", 0, -1)
-                row.assignmentText:SetWidth(textWidth)
                 row.assignmentText:SetWordWrap(false)
                 row.assignmentText:SetJustifyH("CENTER")
                 row.assignmentText:SetTextColor(0.75, 0.72, 0.62)
-                book.entityRows[index] = row
+                book.entityRows[rowNumber] = row
             end
 
+            local entity = entities[entityIndex]
             local currentEntity = entity
             row.entity = entity
             row:ClearAllPoints()
-            row:SetPoint("TOPLEFT", book.listContent, "TOPLEFT", 4, -(8 + (index - 1) * (rowHeight + rowSpacing)))
+            row:SetPoint(
+                "TOPLEFT",
+                book.listContent,
+                "TOPLEFT",
+                4,
+                -(8 + (entityIndex - 1) * rowStep)
+            )
             row:SetWidth(book.listContent:GetWidth() - 8)
+            row.nameText:SetWidth(textWidth)
+            row.assignmentText:SetWidth(textWidth)
             row.icon:SetTexture(entity.icon)
             row.nameText:SetText(entity.name)
             local isLockedMount = book.kind == "mount" and entity.isCollected == false
@@ -1509,7 +1671,22 @@ local function createAssignmentBook(page, kind, pageTitle)
                 row.icon:SetVertexColor(1, 1, 1)
                 row.nameText:SetTextColor(1, 0.82, 0)
             end
-            row.selectionTexture:SetShown(book.selectedEntity.id == entity.id)
+            row.selectionTexture:SetShown(
+                book.selectedEntity and book.selectedEntity.id == entity.id
+            )
+            local selections = book.kind == "mount"
+                and selectedMountMusicDraft or selectedDruidFormMusicDraft
+            local assignment = selections[entity.id]
+            local songName, fileID
+            if assignment then
+                songName, fileID = next(assignment)
+            end
+            local assignmentLabel = fileID == "noMusic" and "No Music"
+                or songName or "Choose a song"
+            if book.kind == "mount" and entity.isCollected == false then
+                assignmentLabel = "Locked - " .. assignmentLabel
+            end
+            row.assignmentText:SetText(assignmentLabel)
             row:SetScript("OnClick", function()
                 book.selectedEntity = currentEntity
                 if book.kind == "mount" then
@@ -1530,18 +1707,63 @@ local function createAssignmentBook(page, kind, pageTitle)
             row:Show()
         end
 
-        for index = #entities + 1, #book.entityRows do
+        for index = rowNumber + 1, #book.entityRows do
             book.entityRows[index].entity = nil
             book.entityRows[index]:Hide()
         end
+    end
+    book.renderEntityRows = renderEntityRows
+    book.listScroll:HookScript("OnVerticalScroll", function()
+        book.renderEntityRows()
+    end)
 
-        book.emptyText:SetText(#entities == 0 and "No entries available" or "")
+    function book.setEntities(entities, savedEntityID)
+        book.allEntities = entities
+
+        local visibleEntities = {}
+        local searchText = book.searchBox and string.lower(book.searchBox:GetText()) or ""
+        searchText = string.gsub(searchText, "^%s+", "")
+        searchText = string.gsub(searchText, "%s+$", "")
+        local filters = getMountCollectionFilter()
+
+        for _, entity in ipairs(entities) do
+            local matchesCollection = book.kind ~= "mount"
+                or (entity.isCollected == false and filters.uncollected)
+                or (entity.isCollected ~= false and filters.collected)
+            local matchesSearch = searchText == ""
+                or string.find(string.lower(entity.name), searchText, 1, true)
+            if matchesCollection and matchesSearch then
+                table.insert(visibleEntities, entity)
+            end
+        end
+        book.visibleEntities = visibleEntities
+
+        local selectedEntity
+        for _, entity in ipairs(visibleEntities) do
+            if entity.id == savedEntityID then
+                selectedEntity = entity
+                break
+            end
+        end
+        book.selectedEntity = selectedEntity or visibleEntities[1]
+        local assignedName, assignedFileID = getBookSelection(book)
+        if assignedFileID and assignedFileID ~= "noMusic" then
+            book.previewTrackName = assignedName
+            book.previewTrackFileID = assignedFileID
+        else
+            book.previewTrackName = nil
+            book.previewTrackFileID = nil
+        end
+
+        book.listContent:SetWidth(math.max(220, book.listScroll:GetWidth()))
+        book.emptyText:SetText(#visibleEntities == 0 and "No entries available" or "")
         book.listContent:SetHeight(math.max(
             book.listScroll:GetHeight(),
-            (#entities * (rowHeight + rowSpacing)) + 16
+            (#visibleEntities * 56) + 16
         ))
         book.listScroll:UpdateScrollChildRect()
         book.listScroll:SetVerticalScroll(0)
+        book.renderEntityRows()
         refreshBookSelection(book)
     end
 
@@ -1918,10 +2140,17 @@ local function onEvent(_, event, ...)
             print("Click the Mount Music minimap icon to open and load settings.")
         end
     end
-    if event == "PLAYER_LOGOUT"
-        and (type(MountMusicDB.pendingMountMusicDraft) == "table"
-            or type(MountMusicDB.pendingDruidFormMusicDraft) == "table") then
-        saveDraftMusicSelections()
+    if event == "PLAYER_LOGOUT" then
+        local icon = LDBIcon:GetMinimapButton("MountMusic")
+        local minimapPosition = icon and icon.db and icon.db.minimapPos
+            or icon and icon.minimapPos
+        if type(minimapPosition) == "number" then
+            saveMinimapButtonPosition(minimapPosition)
+        end
+        if type(MountMusicDB.pendingMountMusicDraft) == "table"
+            or type(MountMusicDB.pendingDruidFormMusicDraft) == "table" then
+            saveDraftMusicSelections()
+        end
     end
     if event == "UNIT_AURA" then
         local unitID = ...
