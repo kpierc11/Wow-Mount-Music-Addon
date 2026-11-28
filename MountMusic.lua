@@ -1057,6 +1057,7 @@ end
 local manualPlaySequence = 0
 local formTransitionToken = 0
 local formTransitionPending = false
+local cachedDruidFormName
 
 local function getDruidFormNameForSpellID(spellID)
     if not spellID then
@@ -1095,6 +1096,23 @@ local function getDruidFormNameForAura(auraName, spellID)
 end
 
 local function getCurrentDruidFormName()
+    local function rememberFormName(formName)
+        cachedDruidFormName = formName
+        return formName
+    end
+
+    if InCombatLockdown and InCombatLockdown() then
+        if GetShapeshiftFormID then
+            local formID = GetShapeshiftFormID()
+            local formName = druidFormNamesByFormID[formID]
+            if formName or (formID and formID ~= 0) then
+                return rememberFormName(formName or cachedDruidFormName)
+            end
+            return rememberFormName(nil)
+        end
+        return cachedDruidFormName
+    end
+
     if C_UnitAuras and C_UnitAuras.GetAuraDataByIndex then
         for auraIndex = 1, 255 do
             local aura = C_UnitAuras.GetAuraDataByIndex("player", auraIndex, "HELPFUL")
@@ -1103,7 +1121,7 @@ local function getCurrentDruidFormName()
             end
             local formName = getDruidFormNameForAura(aura.name, aura.spellId)
             if formName then
-                return formName
+                return rememberFormName(formName)
             end
         end
     elseif UnitAura then
@@ -1111,7 +1129,7 @@ local function getCurrentDruidFormName()
             local auraName, _, _, _, _, _, _, _, _, spellID = UnitAura("player", auraIndex, "HELPFUL")
             local formName = getDruidFormNameForAura(auraName, spellID)
             if formName then
-                return formName
+                return rememberFormName(formName)
             end
         end
     end
@@ -1119,7 +1137,7 @@ local function getCurrentDruidFormName()
     if GetShapeshiftFormID then
         local formName = druidFormNamesByFormID[GetShapeshiftFormID()]
         if formName then
-            return formName
+            return rememberFormName(formName)
         end
     end
 
@@ -1127,7 +1145,7 @@ local function getCurrentDruidFormName()
         local function getNameForActiveForm(formIndex)
             local _, isActive, _, spellID = GetShapeshiftFormInfo(formIndex)
             if isActive then
-                return getDruidFormNameForSpellID(spellID)
+                return rememberFormName(getDruidFormNameForSpellID(spellID))
             end
         end
 
@@ -1154,10 +1172,12 @@ local function getCurrentDruidFormName()
     if C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID then
         for _, form in ipairs(druidFormDefinitions) do
             if C_UnitAuras.GetPlayerAuraBySpellID(form.spellID) then
-                return form.name
+                return rememberFormName(form.name)
             end
         end
     end
+
+    return rememberFormName(nil)
 end
 
 local function getActiveMusicTarget()
